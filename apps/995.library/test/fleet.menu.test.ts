@@ -348,7 +348,7 @@ test.serial(
         const model = new MenuModel()
         const mockTargets = [
             '[../000.series-dashboard/apps/995.library]',
-            '[../000.series-sower-conductor/apps/995.library]',
+            '[../000.series-sower-engine/apps/995.library]',
         ]
 
         let displayedChoices: string[] = []
