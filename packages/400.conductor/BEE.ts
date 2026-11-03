@@ -3,6 +3,7 @@ import SqliteUnit from './08.sqlite.unit/sqlite.unit.js';
 import LedgerUnit from './21.ledger.unit/ledger.unit.js';
 import CudaUnit from './27.cuda.unit/cuda.unit.js';
 import CpusUnit from './28.cpus.unit/cpus.unit.js';
+import ContinuityUnit from './29.continuity.unit/continuity.unit.js';
 import CanonUnit from './30.canon.unit/canon.unit.js';
 import AssetUnit from './33.asset.unit/asset.unit.js';
 import AbstractSyntaxTreeUnit from './34.abstractsyntaxtree.unit/abstractsyntaxtree.unit.js';
@@ -14,6 +15,7 @@ export const list: Array<any> = [
   LedgerUnit,
   CudaUnit,
   CpusUnit,
+  ContinuityUnit,
   CanonUnit,
   AssetUnit,
   AbstractSyntaxTreeUnit
@@ -24,6 +26,7 @@ import * as reduceFromSqlite from './08.sqlite.unit/sqlite.reduce.js';
 import * as reduceFromLedger from './21.ledger.unit/ledger.reduce.js';
 import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js';
 import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js';
+import * as reduceFromContinuity from './29.continuity.unit/continuity.reduce.js';
 import * as reduceFromCanon from './30.canon.unit/canon.reduce.js';
 import * as reduceFromAsset from './33.asset.unit/asset.reduce.js';
 import * as reduceFromAST from './34.abstractsyntaxtree.unit/abstractsyntaxtree.reduce.js';
@@ -34,6 +37,7 @@ export const reducer: any = {
   ledger: reduceFromLedger.reducer,
   cuda: reduceFromCuda.reducer,
   cpus: reduceFromCpus.reducer,
+  continuity: reduceFromContinuity.reducer,
   canon: reduceFromCanon.reducer,
   asset: reduceFromAsset.reducer,
   ast: reduceFromAST.reducer
@@ -46,6 +50,7 @@ export default class UnitData implements Model {
   ledger: any;
   cuda: any;
   cpus: any;
+  continuity: any;
   canon: any;
   asset: any;
   ast: any;

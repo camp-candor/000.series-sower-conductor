@@ -1,5 +1,5 @@
-import Continuity from './fce/continuity.interface'
-import ContinuityBit from './fce/continuity.interface'
+import Continuity from './fce/continuity.interface.js';
+import ContinuityBit from './fce/continuity.bit.js';
 
 export class ContinuityModel implements Continuity {
     //idx:string;
