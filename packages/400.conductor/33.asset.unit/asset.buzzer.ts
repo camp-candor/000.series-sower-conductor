@@ -1,2 +1,1 @@
-export { initAsset } from './buz/asset.buzz'
-export { updateAsset } from './buz/asset.buzz'
+export { initAsset, verifyAssetTreeParity } from './buz/asset.buzz.js';

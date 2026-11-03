@@ -1,5 +1,5 @@
-import State from '../99.core/state'
+import State from '../99.core/state.js';
 
 export default class AssetUnit {
-    constructor(state: State) {}
+  constructor(public state: State) {}
 }
