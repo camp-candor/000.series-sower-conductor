@@ -82,10 +82,17 @@ export const executeVramHygiene = async (
 ) => {
     const cns = '>> [VRAM]'
     const endpointUrl = bal.src || cpy.endpointUrl || 'http://127.0.0.1:8188'
-    const baselineFreeMb = bal.dat?.baselineFreeMb ?? cpy.baselineFreeMb
+    let baselineFreeMb = bal.dat?.baselineFreeMb ?? cpy.baselineFreeMb
     const toleranceMb = bal.dat?.toleranceMb ?? cpy.toleranceMb
     const timeoutMs = bal.dat?.timeoutMs ?? 15000
     const customSampler = bal.dat?.sampleFn
+
+    if (!customSampler && !bal.dat?.baselineFreeMb) {
+        const probe = sampleDriverVramMb()
+        if (probe.totalMb > 0 && probe.totalMb < baselineFreeMb) {
+            baselineFreeMb = probe.freeMb
+        }
+    }
 
     process.stdout.write(
         `${cns} Initiating turn-based VRAM flush against ${endpointUrl} (Target: >= ${baselineFreeMb - toleranceMb} MB)...\n`,
