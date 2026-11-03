@@ -1,7 +1,18 @@
-import CanonBit from './canon.bit'
+import { Model } from '../../99.core/interface/model.interface.js';
 
-export default interface Canon {
-    // idx:string;
-    // canonBitList: CanonBit[];
-    // canonBits:any;
+export interface BibleState {
+  series_slug: string;
+  canon_merkle_root: string;
+  characters: Record<string, unknown>;
+  environments: Record<string, unknown>;
+  grievances: Record<string, unknown>;
+  props: Record<string, unknown>;
+  compiled_at_ms: number;
+}
+
+export default interface Canon extends Model {
+  activeSeriesSlug: string;
+  activeMerkleRoot: string;
+  isFrozen: boolean;
+  activeCanon: Readonly<BibleState> | null;
 }
