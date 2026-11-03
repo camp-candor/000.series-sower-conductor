@@ -8,6 +8,8 @@ import * as ActCud from '../../27.cuda.unit/cuda.action.js'
 import * as ActSql from '../../08.sqlite.unit/sqlite.action.js'
 import * as ActAst from '../../33.asset.unit/asset.action.js'
 import * as ActVrm from '../../26.vram.unit/vram.action.js'
+import * as Align from '../../val/align.js'
+import * as Color from '../../val/console-color.js'
 
 let rootResolver: Function | null = null
 
@@ -29,11 +31,16 @@ export const initMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
 
     const lib = (globalThis as any).LIBRARY
     if (lib && typeof lib.hunt === 'function') {
-        await lib.hunt('[Grid action] Update Grid', {
+        const gridConsole = await lib.hunt('[Grid action] Update Grid', {
             x: 4,
             y: 0,
             xSpan: 8,
             ySpan: 12,
+        })
+        await lib.hunt('[Write action] Write Console', {
+            idx: 'cns00',
+            src: '',
+            dat: { net: gridConsole?.grdBit?.dat, src: 'alligator0' },
         })
     }
 
@@ -107,11 +114,21 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         return cpy
     }
 
+    const gridChoice = await lib.hunt('[Grid action] Update Grid', {
+        x: 0,
+        y: 4,
+        xSpan: 4,
+        ySpan: 8,
+    })
+
     const selection = await lib.hunt('[Open action] Open Choice', {
         x: 0,
         y: 4,
         xSpan: 4,
         ySpan: 8,
+        dat: { clr0: Color.BLACK, clr1: Color.YELLOW },
+        src: Align.VERTICAL,
+        net: gridChoice?.grdBit?.dat,
         lst: choices,
         cb: async (focusedItem: string) => {
             const tip = tooltips[focusedItem]
