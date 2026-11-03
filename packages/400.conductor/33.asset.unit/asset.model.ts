@@ -1,8 +1,9 @@
-import Asset from './fce/asset.interface'
-import AssetBit from './fce/asset.interface'
+import Asset, { PinnedTrees } from './fce/asset.interface.js';
 
 export class AssetModel implements Asset {
-    //idx:string;
-    //assetBitList: AssetBit[] = [];
-    //assetBits: any = {};
+  idx: string = '33.asset.unit';
+  seriesSlug: string = 'wiregrass-basin';
+  manifestVersion: string = '1.0.0';
+  isParityVerified: boolean = false;
+  liveTrees: PinnedTrees | null = null;
 }
