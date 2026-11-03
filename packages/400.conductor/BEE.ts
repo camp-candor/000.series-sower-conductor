@@ -1,6 +1,7 @@
 import ConductorUnit from './00.conductor.unit/conductor.unit.js'
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js'
 import LedgerUnit from './21.ledger.unit/ledger.unit.js'
+import VramUnit from './26.vram.unit/vram.unit.js'
 import CudaUnit from './27.cuda.unit/cuda.unit.js'
 import CpusUnit from './28.cpus.unit/cpus.unit.js'
 import ContinuityUnit from './29.continuity.unit/continuity.unit.js'
@@ -13,6 +14,7 @@ export const list: Array<any> = [
     ConductorUnit,
     SqliteUnit,
     LedgerUnit,
+    VramUnit,
     CudaUnit,
     CpusUnit,
     ContinuityUnit,
@@ -24,6 +26,7 @@ export const list: Array<any> = [
 import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js'
 import * as reduceFromSqlite from './08.sqlite.unit/sqlite.reduce.js'
 import * as reduceFromLedger from './21.ledger.unit/ledger.reduce.js'
+import * as reduceFromVram from './26.vram.unit/vram.reduce.js'
 import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js'
 import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js'
 import * as reduceFromContinuity from './29.continuity.unit/continuity.reduce.js'
@@ -35,6 +38,7 @@ export const reducer: any = {
     conductor: reduceFromConductor.reducer,
     sqlite: reduceFromSqlite.reducer,
     ledger: reduceFromLedger.reducer,
+    vram: reduceFromVram.reducer,
     cuda: reduceFromCuda.reducer,
     cpus: reduceFromCpus.reducer,
     continuity: reduceFromContinuity.reducer,
@@ -43,15 +47,17 @@ export const reducer: any = {
     ast: reduceFromAST.reducer,
 }
 
+// prettier-ignore
 export default class UnitData implements Model {
-    idx: string = '400.conductor'
-    conductor: any
-    sqlite: any
-    ledger: any
-    cuda: any
-    cpus: any
-    continuity: any
-    canon: any
-    asset: any
-    ast: any
+    idx: string = '400.conductor';
+    conductor: any;
+    sqlite: any;
+    ledger: any;
+    vram: any;
+    cuda: any;
+    cpus: any;
+    continuity: any;
+    canon: any;
+    asset: any;
+    ast: any;
 }

@@ -1,17 +1,16 @@
-import { BehaviorSubject } from 'rx-lite'
-import { Subject } from 'rx-lite'
+import Rx from 'rx-lite'
 import { Action } from './interface/action.interface.js'
 
 import UnitModel from '../BEE.js'
 import * as Effect from '../BEE.js'
 
-export default class State extends BehaviorSubject<any> {
+export default class State extends Rx.BehaviorSubject<any> {
     public hunt: any
     public value: any
     public pivot: any
     public bus: any
 
-    private dispatcher: Subject<any> = new Subject()
+    private dispatcher: Rx.Subject<any> = new Rx.Subject()
 
     constructor(init: UnitModel = new UnitModel()) {
         super(init)
