@@ -1,4 +1,4 @@
-import Model from './99.core/interface/model.interface'
+import { Model } from './99.core/interface/model.interface'
 
 import ConductorUnit from './00.conductor.unit/conductor.unit'
 import ModelUnit from './96.model.unit/model.unit'
@@ -40,6 +40,7 @@ export const reducer: any = {
 }
 
 export default class UnitData implements Model {
+    idx: string = '400.conductor'
     conductor: Conductor = new ConductorModel()
     model: ModelInterface = new ModelModel()
     collect: Collect = new CollectModel()
