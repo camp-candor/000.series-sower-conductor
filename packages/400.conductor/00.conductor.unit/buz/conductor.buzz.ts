@@ -18,41 +18,11 @@ export const initConductor = (
         '>> [CONDUCTOR] [OK] packages/400.conductor initialized cleanly.\n',
     )
 
-    const urlconductor =
-        'https://zero00-conductor.onrender.com/api/conductor/test'
-
-    Promise.resolve().then(async () => {
-        try {
-            const res = await fetch(urlconductor)
-            const data = await res.json()
-            if (bal.slv) {
-                bal.slv({
-                    intBit: {
-                        idx: 'init-conductor',
-                        dat: {
-                            conductor: data,
-                        },
-                    },
-                })
-            }
-        } catch (e: any) {
-            if (bal.slv) {
-                bal.slv({
-                    intBit: {
-                        idx: 'init-conductor-err',
-                        dat: e.message,
-                    },
-                })
-            }
-        }
-    })
-
     if (bal.slv) {
         bal.slv({
             conductorBit: {
                 idx: 'init-conductor',
                 val: 1,
-                dat: { status: cpy.status },
             },
         })
     }
