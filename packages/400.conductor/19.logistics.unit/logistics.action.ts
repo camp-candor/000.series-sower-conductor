@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import LogisticsBit from './fce/logistics.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import LogisticsBit from './fce/logistics.bit.js'
 
 // Logistics actions
 

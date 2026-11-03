@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './types.action'
-import { TypesModel } from './types.model'
-import * as Buzz from './types.buzzer'
-import State from '../99.core/state'
+import * as Act from './types.action.js'
+import { TypesModel } from './types.model.js'
+import * as Buzz from './types.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: TypesModel = new TypesModel(),

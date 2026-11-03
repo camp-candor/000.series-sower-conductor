@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import EpisodeBit from './fce/episode.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import EpisodeBit from './fce/episode.bit.js'
 
 // Episode actions
 

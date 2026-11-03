@@ -1,5 +1,5 @@
-import Somaticdsp from './fce/somaticdsp.interface'
-import SomaticdspBit from './fce/somaticdsp.interface'
+import Somaticdsp from './fce/somaticdsp.interface.js'
+import SomaticdspBit from './fce/somaticdsp.interface.js'
 
 export class SomaticdspModel implements Somaticdsp {
     //idx:string;

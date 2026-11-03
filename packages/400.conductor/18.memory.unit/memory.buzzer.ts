@@ -1,2 +1,2 @@
-export { initMemory } from './buz/memory.buzz'
-export { updateMemory } from './buz/memory.buzz'
+export { initMemory } from './buz/memory.buzz.js'
+export { updateMemory } from './buz/memory.buzz.js'

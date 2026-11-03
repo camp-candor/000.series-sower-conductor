@@ -1,5 +1,5 @@
-import Audio from './fce/audio.interface'
-import AudioBit from './fce/audio.interface'
+import Audio from './fce/audio.interface.js'
+import AudioBit from './fce/audio.interface.js'
 
 export class AudioModel implements Audio {
     //idx:string;

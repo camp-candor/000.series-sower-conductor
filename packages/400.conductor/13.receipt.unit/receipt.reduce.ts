@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './receipt.action'
-import { ReceiptModel } from './receipt.model'
-import * as Buzz from './receipt.buzzer'
-import State from '../99.core/state'
+import * as Act from './receipt.action.js'
+import { ReceiptModel } from './receipt.model.js'
+import * as Buzz from './receipt.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: ReceiptModel = new ReceiptModel(),

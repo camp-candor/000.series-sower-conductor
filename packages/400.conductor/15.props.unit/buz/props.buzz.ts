@@ -1,12 +1,14 @@
-export const initProps = (cpy: PropsModel, bal: PropsBit, ste: State) => {
-    debugger
-    return cpy
-}
+import { PropsModel } from '../props.model.js';
+import PropsBit from '../fce/props.bit.js';
+import State from '../../99.core/state.js';
 
-export const updateProps = (cpy: PropsModel, bal: PropsBit, ste: State) => {
-    return cpy
-}
+export const initProps = (cpy: PropsModel, bal: PropsBit, _ste: State) => {
+  if (bal.slv) bal.slv({ propsBit: { idx: 'init-props', val: 1 } });
+  return cpy;
+};
 
-import { PropsModel } from '../props.model'
-import PropsBit from '../fce/props.bit'
-import State from '../../99.core/state'
+export const updateProps = (cpy: PropsModel, bal: PropsBit, _ste: State) => {
+  if (bal.slv) bal.slv({ propsBit: { idx: 'update-props', val: 1 } });
+  return cpy;
+};
+

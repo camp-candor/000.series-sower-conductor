@@ -3,7 +3,7 @@ export const initPipeline = (
     bal: PipelineBit,
     ste: State,
 ) => {
-    debugger
+
     return cpy
 }
 
@@ -15,6 +15,6 @@ export const updatePipeline = (
     return cpy
 }
 
-import { PipelineModel } from '../pipeline.model'
-import PipelineBit from '../fce/pipeline.bit'
-import State from '../../99.core/state'
+import { PipelineModel } from '../pipeline.model.js'
+import PipelineBit from '../fce/pipeline.bit.js'
+import State from '../../99.core/state.js'

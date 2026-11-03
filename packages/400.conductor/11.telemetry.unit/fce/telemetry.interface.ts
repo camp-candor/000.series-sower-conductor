@@ -1,4 +1,4 @@
-import TelemetryBit from './telemetry.bit'
+import TelemetryBit from './telemetry.bit.js'
 
 export default interface Telemetry {
     // idx:string;

@@ -1,4 +1,4 @@
-import SceneBit from './scene.bit'
+import SceneBit from './scene.bit.js'
 
 export default interface Scene {
     // idx:string;

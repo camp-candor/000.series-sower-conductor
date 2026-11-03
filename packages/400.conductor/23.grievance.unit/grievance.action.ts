@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import GrievanceBit from './fce/grievance.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import GrievanceBit from './fce/grievance.bit.js'
 
 // Grievance actions
 

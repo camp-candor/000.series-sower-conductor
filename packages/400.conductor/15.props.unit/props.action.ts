@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import PropsBit from './fce/props.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import PropsBit from './fce/props.bit.js'
 
 // Props actions
 

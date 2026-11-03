@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './reaction.action'
-import { ReactionModel } from './reaction.model'
-import * as Buzz from './reaction.buzzer'
-import State from '../99.core/state'
+import * as Act from './reaction.action.js'
+import { ReactionModel } from './reaction.model.js'
+import * as Buzz from './reaction.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: ReactionModel = new ReactionModel(),

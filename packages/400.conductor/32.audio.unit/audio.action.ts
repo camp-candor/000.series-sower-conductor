@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import AudioBit from './fce/audio.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import AudioBit from './fce/audio.bit.js'
 
 // Audio actions
 

@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import LawsBit from './fce/laws.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import LawsBit from './fce/laws.bit.js'
 
 // Laws actions
 

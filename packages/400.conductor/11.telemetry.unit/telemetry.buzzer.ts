@@ -1,2 +1,2 @@
-export { initTelemetry } from './buz/telemetry.buzz'
-export { updateTelemetry } from './buz/telemetry.buzz'
+export { initTelemetry } from './buz/telemetry.buzz.js'
+export { updateTelemetry } from './buz/telemetry.buzz.js'

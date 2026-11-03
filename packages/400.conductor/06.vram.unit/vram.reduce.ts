@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './vram.action'
-import { VramModel } from './vram.model'
-import * as Buzz from './vram.buzzer'
-import State from '../99.core/state'
+import * as Act from './vram.action.js'
+import { VramModel } from './vram.model.js'
+import * as Buzz from './vram.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: VramModel = new VramModel(),

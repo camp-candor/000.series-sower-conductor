@@ -1,20 +1,14 @@
-export const initNarrative = (
-    cpy: NarrativeModel,
-    bal: NarrativeBit,
-    ste: State,
-) => {
-    debugger
-    return cpy
-}
+import { NarrativeModel } from '../narrative.model.js';
+import NarrativeBit from '../fce/narrative.bit.js';
+import State from '../../99.core/state.js';
 
-export const updateNarrative = (
-    cpy: NarrativeModel,
-    bal: NarrativeBit,
-    ste: State,
-) => {
-    return cpy
-}
+export const initNarrative = (cpy: NarrativeModel, bal: NarrativeBit, _ste: State) => {
+  if (bal.slv) bal.slv({ narrativeBit: { idx: 'init-narrative', val: 1 } });
+  return cpy;
+};
 
-import { NarrativeModel } from '../narrative.model'
-import NarrativeBit from '../fce/narrative.bit'
-import State from '../../99.core/state'
+export const updateNarrative = (cpy: NarrativeModel, bal: NarrativeBit, _ste: State) => {
+  if (bal.slv) bal.slv({ narrativeBit: { idx: 'update-narrative', val: 1 } });
+  return cpy;
+};
+

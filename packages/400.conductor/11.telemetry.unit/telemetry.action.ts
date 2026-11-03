@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import TelemetryBit from './fce/telemetry.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import TelemetryBit from './fce/telemetry.bit.js'
 
 // Telemetry actions
 

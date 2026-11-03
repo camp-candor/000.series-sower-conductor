@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import VramBit from './fce/vram.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import VramBit from './fce/vram.bit.js'
 
 // Vram actions
 

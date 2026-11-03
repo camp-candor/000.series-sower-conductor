@@ -1,4 +1,4 @@
-import WaveBit from './wave.bit'
+import WaveBit from './wave.bit.js'
 
 export default interface Wave {
     // idx:string;

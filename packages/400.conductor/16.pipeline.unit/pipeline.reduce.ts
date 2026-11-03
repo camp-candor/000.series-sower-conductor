@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './pipeline.action'
-import { PipelineModel } from './pipeline.model'
-import * as Buzz from './pipeline.buzzer'
-import State from '../99.core/state'
+import * as Act from './pipeline.action.js'
+import { PipelineModel } from './pipeline.model.js'
+import * as Buzz from './pipeline.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: PipelineModel = new PipelineModel(),

@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import LifecycleBit from './fce/lifecycle.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import LifecycleBit from './fce/lifecycle.bit.js'
 
 // Lifecycle actions
 

@@ -1,4 +1,4 @@
-import SomaticdspBit from './somaticdsp.bit'
+import SomaticdspBit from './somaticdsp.bit.js'
 
 export default interface Somaticdsp {
     // idx:string;

@@ -1,4 +1,4 @@
-import PipelineBit from './pipeline.bit'
+import PipelineBit from './pipeline.bit.js'
 
 export default interface Pipeline {
     // idx:string;

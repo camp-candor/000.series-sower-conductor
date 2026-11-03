@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import MemoryBit from './fce/memory.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import MemoryBit from './fce/memory.bit.js'
 
 // Memory actions
 

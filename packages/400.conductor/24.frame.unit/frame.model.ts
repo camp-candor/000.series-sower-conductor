@@ -1,5 +1,5 @@
-import Frame from './fce/frame.interface'
-import FrameBit from './fce/frame.interface'
+import Frame from './fce/frame.interface.js'
+import FrameBit from './fce/frame.interface.js'
 
 export class FrameModel implements Frame {
     //idx:string;

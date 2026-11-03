@@ -1,5 +1,5 @@
-import Receipt from './fce/receipt.interface'
-import ReceiptBit from './fce/receipt.interface'
+import Receipt from './fce/receipt.interface.js'
+import ReceiptBit from './fce/receipt.interface.js'
 
 export class ReceiptModel implements Receipt {
     //idx:string;

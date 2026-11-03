@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import FrameBit from './fce/frame.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import FrameBit from './fce/frame.bit.js'
 
 // Frame actions
 

@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './narrative.action'
-import { NarrativeModel } from './narrative.model'
-import * as Buzz from './narrative.buzzer'
-import State from '../99.core/state'
+import * as Act from './narrative.action.js'
+import { NarrativeModel } from './narrative.model.js'
+import * as Buzz from './narrative.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: NarrativeModel = new NarrativeModel(),

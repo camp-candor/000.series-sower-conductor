@@ -1,2 +1,2 @@
-export { initLifecycle } from './buz/lifecycle.buzz'
-export { updateLifecycle } from './buz/lifecycle.buzz'
+export { initLifecycle } from './buz/lifecycle.buzz.js'
+export { updateLifecycle } from './buz/lifecycle.buzz.js'

@@ -1,2 +1,2 @@
-export { initPipeline } from './buz/pipeline.buzz'
-export { updatePipeline } from './buz/pipeline.buzz'
+export { initPipeline } from './buz/pipeline.buzz.js'
+export { updatePipeline } from './buz/pipeline.buzz.js'

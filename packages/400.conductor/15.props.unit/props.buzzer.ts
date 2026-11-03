@@ -1,2 +1,2 @@
-export { initProps } from './buz/props.buzz'
-export { updateProps } from './buz/props.buzz'
+export { initProps } from './buz/props.buzz.js'
+export { updateProps } from './buz/props.buzz.js'

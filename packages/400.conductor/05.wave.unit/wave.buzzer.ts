@@ -1,2 +1,2 @@
-export { initWave } from './buz/wave.buzz'
-export { updateWave } from './buz/wave.buzz'
+export { initWave } from './buz/wave.buzz.js'
+export { updateWave } from './buz/wave.buzz.js'

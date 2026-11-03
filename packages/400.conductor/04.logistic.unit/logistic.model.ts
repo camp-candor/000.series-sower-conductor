@@ -1,5 +1,5 @@
-import Logistic from './fce/logistic.interface'
-import LogisticBit from './fce/logistic.interface'
+import Logistic from './fce/logistic.interface.js'
+import LogisticBit from './fce/logistic.interface.js'
 
 export class LogisticModel implements Logistic {
     //idx:string;

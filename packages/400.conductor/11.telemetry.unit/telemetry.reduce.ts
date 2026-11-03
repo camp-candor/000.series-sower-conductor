@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './telemetry.action'
-import { TelemetryModel } from './telemetry.model'
-import * as Buzz from './telemetry.buzzer'
-import State from '../99.core/state'
+import * as Act from './telemetry.action.js'
+import { TelemetryModel } from './telemetry.model.js'
+import * as Buzz from './telemetry.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: TelemetryModel = new TelemetryModel(),

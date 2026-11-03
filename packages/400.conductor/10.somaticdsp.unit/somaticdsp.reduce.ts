@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './somaticdsp.action'
-import { SomaticdspModel } from './somaticdsp.model'
-import * as Buzz from './somaticdsp.buzzer'
-import State from '../99.core/state'
+import * as Act from './somaticdsp.action.js'
+import { SomaticdspModel } from './somaticdsp.model.js'
+import * as Buzz from './somaticdsp.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: SomaticdspModel = new SomaticdspModel(),
