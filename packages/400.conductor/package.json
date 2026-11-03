@@ -16,7 +16,7 @@
     "dependencies": {
         "@remotion/renderer": "^4.0.0",
         "better-sqlite3": "^11.8.1",
-        "clone-deep": "^4.0.1",
+        "clone-deep": "4.0.1",
         "dotenv": "^16.4.5",
         "ws": "^8.18.0",
         "zod": "^3.23.8"
