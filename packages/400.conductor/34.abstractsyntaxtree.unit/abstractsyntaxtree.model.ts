@@ -1,8 +1,8 @@
-import Abstractsyntaxtree from './fce/abstractsyntaxtree.interface'
-import AbstractsyntaxtreeBit from './fce/abstractsyntaxtree.interface'
+import AbstractSyntaxTree, { SceneAST } from './fce/abstractsyntaxtree.interface.js';
 
-export class AbstractsyntaxtreeModel implements Abstractsyntaxtree {
-    //idx:string;
-    //abstractsyntaxtreeBitList: AbstractsyntaxtreeBit[] = [];
-    //abstractsyntaxtreeBits: any = {};
+export class AbstractSyntaxTreeModel implements AbstractSyntaxTree {
+  idx: string = '34.abstractsyntaxtree.unit';
+  lastParsedSceneId: string = 'NONE';
+  totalLinesValidated: number = 0;
+  activeScene: Readonly<SceneAST> | null = null;
 }

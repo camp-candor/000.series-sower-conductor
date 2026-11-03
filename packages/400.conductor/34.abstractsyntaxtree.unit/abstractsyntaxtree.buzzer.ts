@@ -1,2 +1,1 @@
-export { initAbstractsyntaxtree } from './buz/abstractsyntaxtree.buzz'
-export { updateAbstractsyntaxtree } from './buz/abstractsyntaxtree.buzz'
+export { initAbstractSyntaxTree, parseSceneAST } from './buz/abstractsyntaxtree.buzz.js';

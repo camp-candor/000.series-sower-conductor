@@ -1,5 +1,5 @@
-import State from '../99.core/state'
+import State from '../99.core/state.js';
 
-export default class AbstractsyntaxtreeUnit {
-    constructor(state: State) {}
+export default class AbstractSyntaxTreeUnit {
+  constructor(public state: State) {}
 }

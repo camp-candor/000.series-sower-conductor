@@ -1,20 +1,16 @@
-import { Action } from '../99.core/interface/action.interface'
-import AbstractsyntaxtreeBit from './fce/abstractsyntaxtree.bit'
+import { Action } from '../99.core/interface/action.interface.js';
+import AbstractSyntaxTreeBit from './fce/abstractsyntaxtree.bit.js';
 
-// Abstractsyntaxtree actions
-
-export const INIT_ABSTRACTSYNTAXTREE =
-    '[Abstractsyntaxtree action] Init Abstractsyntaxtree'
-export class InitAbstractsyntaxtree implements Action {
-    readonly type = INIT_ABSTRACTSYNTAXTREE
-    constructor(public bale: AbstractsyntaxtreeBit) {}
+export const INIT_ABSTRACTSYNTAXTREE = '[AbstractSyntaxTree action] Init AbstractSyntaxTree';
+export class InitAbstractSyntaxTree implements Action {
+  readonly type = INIT_ABSTRACTSYNTAXTREE;
+  constructor(public bale: AbstractSyntaxTreeBit) {}
 }
 
-export const UPDATE_ABSTRACTSYNTAXTREE =
-    '[Abstractsyntaxtree action] Update Abstractsyntaxtree'
-export class UpdateAbstractsyntaxtree implements Action {
-    readonly type = UPDATE_ABSTRACTSYNTAXTREE
-    constructor(public bale: AbstractsyntaxtreeBit) {}
+export const PARSE_SCENE_AST = '[AbstractSyntaxTree action] Parse Scene AST';
+export class ParseSceneAST implements Action {
+  readonly type = PARSE_SCENE_AST;
+  constructor(public bale: AbstractSyntaxTreeBit) {}
 }
 
-export type Actions = InitAbstractsyntaxtree | UpdateAbstractsyntaxtree
+export type Actions = InitAbstractSyntaxTree | ParseSceneAST;
