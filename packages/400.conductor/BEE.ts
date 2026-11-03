@@ -4,6 +4,7 @@ import LedgerUnit from './21.ledger.unit/ledger.unit.js';
 import CudaUnit from './27.cuda.unit/cuda.unit.js';
 import CpusUnit from './28.cpus.unit/cpus.unit.js';
 import CanonUnit from './30.canon.unit/canon.unit.js';
+import AssetUnit from './33.asset.unit/asset.unit.js';
 import { Model } from './99.core/interface/model.interface.js';
 
 export const list: Array<any> = [
@@ -12,7 +13,8 @@ export const list: Array<any> = [
   LedgerUnit,
   CudaUnit,
   CpusUnit,
-  CanonUnit
+  CanonUnit,
+  AssetUnit
 ];
 
 import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js';
@@ -21,6 +23,7 @@ import * as reduceFromLedger from './21.ledger.unit/ledger.reduce.js';
 import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js';
 import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js';
 import * as reduceFromCanon from './30.canon.unit/canon.reduce.js';
+import * as reduceFromAsset from './33.asset.unit/asset.reduce.js';
 
 export const reducer: any = {
   conductor: reduceFromConductor.reducer,
@@ -28,7 +31,8 @@ export const reducer: any = {
   ledger: reduceFromLedger.reducer,
   cuda: reduceFromCuda.reducer,
   cpus: reduceFromCpus.reducer,
-  canon: reduceFromCanon.reducer
+  canon: reduceFromCanon.reducer,
+  asset: reduceFromAsset.reducer
 };
 
 export default class UnitData implements Model {
@@ -39,4 +43,5 @@ export default class UnitData implements Model {
   cuda: any;
   cpus: any;
   canon: any;
+  asset: any;
 }
