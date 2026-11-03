@@ -39,8 +39,15 @@ export class ListConductor implements Action {
     constructor(public bale: ConductorBit) {}
 }
 
+export const RUN_SCENE_LIFECYCLE = '[Conductor action] Run Scene Lifecycle'
+export class RunSceneLifecycle implements Action {
+    readonly type = RUN_SCENE_LIFECYCLE
+    constructor(public bale: ConductorBit) {}
+}
+
 export type Actions =
     | InitConductor
+    | RunSceneLifecycle
     | UpdateConductor
     | TestConductor
     | IntellectConductor
