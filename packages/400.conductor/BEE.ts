@@ -13,6 +13,7 @@ import CanonUnit from './30.canon.unit/canon.unit.js';
 import AudioUnit from './32.audio.unit/audio.unit.js';
 import AssetUnit from './33.asset.unit/asset.unit.js';
 import AbstractSyntaxTreeUnit from './34.abstractsyntaxtree.unit/abstractsyntaxtree.unit.js';
+import MenuUnit from './98.menu.unit/menu.unit.js';
 import { Model } from './99.core/interface/model.interface.js';
 
 export const list: Array<any> = [
@@ -31,6 +32,7 @@ export const list: Array<any> = [
   AudioUnit,
   AssetUnit,
   AbstractSyntaxTreeUnit,
+  MenuUnit,
 ];
 
 import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js';
@@ -48,6 +50,7 @@ import * as reduceFromCanon from './30.canon.unit/canon.reduce.js';
 import * as reduceFromAudio from './32.audio.unit/audio.reduce.js';
 import * as reduceFromAsset from './33.asset.unit/asset.reduce.js';
 import * as reduceFromAST from './34.abstractsyntaxtree.unit/abstractsyntaxtree.reduce.js';
+import * as reduceFromMenu from './98.menu.unit/menu.reduce.js';
 
 export const reducer: any = {
   conductor: reduceFromConductor.reducer,
@@ -65,6 +68,7 @@ export const reducer: any = {
   audio: reduceFromAudio.reducer,
   asset: reduceFromAsset.reducer,
   ast: reduceFromAST.reducer,
+  menu: reduceFromMenu.reducer,
 };
 
 // prettier-ignore
@@ -85,4 +89,5 @@ export default class UnitData implements Model {
   audio: any;
   asset: any;
   ast: any;
+  menu: any;
 }
