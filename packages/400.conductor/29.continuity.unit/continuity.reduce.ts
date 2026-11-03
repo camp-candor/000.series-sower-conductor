@@ -1,22 +1,21 @@
 import clone from 'clone-deep'
-import * as Act from './continuity.action'
-import { ContinuityModel } from './continuity.model'
-import * as Buzz from './continuity.buzzer'
-import State from '../99.core/state'
+import * as Act from './continuity.action.js'
+import * as Buzz from './continuity.buzzer.js'
+import { ContinuityModel } from './continuity.model.js'
+import State from '../99.core/state.js'
 
-export function reducer(
-    model: ContinuityModel = new ContinuityModel(),
+export const reducer = (
+    model: any = new ContinuityModel(),
     act: Act.Actions,
-    state?: State,
-) {
+    state: State,
+) => {
+    const cpy = clone(model)
     switch (act.type) {
-        case Act.UPDATE_CONTINUITY:
-            return Buzz.updateContinuity(clone(model), act.bale, state)
-
         case Act.INIT_CONTINUITY:
-            return Buzz.initContinuity(clone(model), act.bale, state)
-
+            return Buzz.initContinuity(cpy, act.bale, state)
+        case Act.EVALUATE_CONTINUITY_GATE:
+            return Buzz.evaluateContinuityGate(cpy, act.bale, state)
         default:
-            return model
+            return cpy
     }
 }

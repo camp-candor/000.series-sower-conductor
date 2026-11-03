@@ -1,8 +1,9 @@
-import Continuity from './fce/continuity.interface'
-import ContinuityBit from './fce/continuity.interface'
+import Continuity from './fce/continuity.interface.js'
 
 export class ContinuityModel implements Continuity {
-    //idx:string;
-    //continuityBitList: ContinuityBit[] = [];
-    //continuityBits: any = {};
+    idx: string = '29.continuity.unit'
+    lastEvaluatedSceneId: string = 'NONE'
+    totalScenesChecked: number = 0
+    totalDirtyScenesBlocked: number = 0
+    lastEvaluationDurationMs: number = 0
 }
