@@ -1,1 +1,5 @@
-export { initSpeech, synthesizeLineAudio, synthesizeSceneAudio } from './buz/speech.buzz.js';
+export {
+    initSpeech,
+    synthesizeLineAudio,
+    synthesizeSceneAudio,
+} from './buz/speech.buzz.js'
