@@ -1,8 +1,9 @@
-import Speech from './fce/speech.interface'
-import SpeechBit from './fce/speech.interface'
+import Speech, { SceneSynthesisResult } from './fce/speech.interface.js';
 
 export class SpeechModel implements Speech {
-    //idx:string;
-    //speechBitList: SpeechBit[] = [];
-    //speechBits: any = {};
+  idx: string = '09.speech.unit';
+  endpointUrl: string = 'http://127.0.0.1:8000';
+  scratchOutputDir: string = 'scratch/audio/dialogue';
+  totalStemsSynthesized: number = 0;
+  lastSceneResult: SceneSynthesisResult | null = null;
 }

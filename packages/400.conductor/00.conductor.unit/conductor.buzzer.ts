@@ -1,4 +1,1 @@
-export { initConductor } from './buz/conductor.buzz.js'
-export { updateConductor } from './buz/conductor.buzz.js'
-export { testConductor } from './buz/conductor.buzz.js'
-export { listConductor } from './buz/conductor.buzz.js'
+export { initConductor, runSceneLifecycle } from './buz/conductor.buzz.js';
