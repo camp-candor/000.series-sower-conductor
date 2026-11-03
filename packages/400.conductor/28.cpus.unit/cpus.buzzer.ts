@@ -1,2 +1,1 @@
-export { initCpus } from './buz/cpus.buzz'
-export { updateCpus } from './buz/cpus.buzz'
+export { initCpus, verifyHardwarePreflight } from './buz/cpus.buzz.js'

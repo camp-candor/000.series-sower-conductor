@@ -1,2 +1,1 @@
-export { initCuda } from './buz/cuda.buzz'
-export { updateCuda } from './buz/cuda.buzz'
+export { initCuda, assertZeroVram } from './buz/cuda.buzz.js'

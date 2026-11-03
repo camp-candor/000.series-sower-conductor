@@ -1,7 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import CudaBit from './fce/cuda.bit'
-
-// Cuda actions
+import { Action } from '../99.core/interface/action.interface.js'
+import CudaBit from './fce/cuda.bit.js'
 
 export const INIT_CUDA = '[Cuda action] Init Cuda'
 export class InitCuda implements Action {
@@ -9,10 +7,10 @@ export class InitCuda implements Action {
     constructor(public bale: CudaBit) {}
 }
 
-export const UPDATE_CUDA = '[Cuda action] Update Cuda'
-export class UpdateCuda implements Action {
-    readonly type = UPDATE_CUDA
+export const ASSERT_ZERO_VRAM = '[Cuda action] Assert Zero Vram'
+export class AssertZeroVram implements Action {
+    readonly type = ASSERT_ZERO_VRAM
     constructor(public bale: CudaBit) {}
 }
 
-export type Actions = InitCuda | UpdateCuda
+export type Actions = InitCuda | AssertZeroVram

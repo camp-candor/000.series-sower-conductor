@@ -1,22 +1,21 @@
 import clone from 'clone-deep'
-import * as Act from './cuda.action'
-import { CudaModel } from './cuda.model'
-import * as Buzz from './cuda.buzzer'
-import State from '../99.core/state'
+import * as Act from './cuda.action.js'
+import * as Buzz from './cuda.buzzer.js'
+import { CudaModel } from './cuda.model.js'
+import State from '../99.core/state.js'
 
-export function reducer(
-    model: CudaModel = new CudaModel(),
+export const reducer = (
+    model: any = new CudaModel(),
     act: Act.Actions,
-    state?: State,
-) {
+    state: State,
+) => {
+    const cpy = clone(model)
     switch (act.type) {
-        case Act.UPDATE_CUDA:
-            return Buzz.updateCuda(clone(model), act.bale, state)
-
         case Act.INIT_CUDA:
-            return Buzz.initCuda(clone(model), act.bale, state)
-
+            return Buzz.initCuda(cpy, act.bale, state)
+        case Act.ASSERT_ZERO_VRAM:
+            return Buzz.assertZeroVram(cpy, act.bale, state)
         default:
-            return model
+            return cpy
     }
 }
