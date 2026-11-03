@@ -1,23 +1,42 @@
-import ConductorUnit from './00.conductor.unit/conductor.unit.js'
-import CudaUnit from './27.cuda.unit/cuda.unit.js'
-import CpusUnit from './28.cpus.unit/cpus.unit.js'
-import { Model } from './99.core/interface/model.interface.js'
+import ConductorUnit from './00.conductor.unit/conductor.unit.js';
+import SqliteUnit from './08.sqlite.unit/sqlite.unit.js';
+import LedgerUnit from './21.ledger.unit/ledger.unit.js';
+import CudaUnit from './27.cuda.unit/cuda.unit.js';
+import CpusUnit from './28.cpus.unit/cpus.unit.js';
+import CanonUnit from './30.canon.unit/canon.unit.js';
+import { Model } from './99.core/interface/model.interface.js';
 
-export const list: Array<any> = [ConductorUnit, CudaUnit, CpusUnit]
+export const list: Array<any> = [
+  ConductorUnit,
+  SqliteUnit,
+  LedgerUnit,
+  CudaUnit,
+  CpusUnit,
+  CanonUnit
+];
 
-import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js'
-import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js'
-import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js'
+import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js';
+import * as reduceFromSqlite from './08.sqlite.unit/sqlite.reduce.js';
+import * as reduceFromLedger from './21.ledger.unit/ledger.reduce.js';
+import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js';
+import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js';
+import * as reduceFromCanon from './30.canon.unit/canon.reduce.js';
 
 export const reducer: any = {
-    conductor: reduceFromConductor.reducer,
-    cuda: reduceFromCuda.reducer,
-    cpus: reduceFromCpus.reducer,
-}
+  conductor: reduceFromConductor.reducer,
+  sqlite: reduceFromSqlite.reducer,
+  ledger: reduceFromLedger.reducer,
+  cuda: reduceFromCuda.reducer,
+  cpus: reduceFromCpus.reducer,
+  canon: reduceFromCanon.reducer
+};
 
 export default class UnitData implements Model {
-    idx: string = '400.conductor'
-    conductor: any
-    cuda: any
-    cpus: any
+  idx: string = '400.conductor';
+  conductor: any;
+  sqlite: any;
+  ledger: any;
+  cuda: any;
+  cpus: any;
+  canon: any;
 }

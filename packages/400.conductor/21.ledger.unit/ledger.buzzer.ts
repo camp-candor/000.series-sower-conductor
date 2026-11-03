@@ -1,2 +1,1 @@
-export { initLedger } from './buz/ledger.buzz'
-export { updateLedger } from './buz/ledger.buzz'
+export { initLedger, insertFact, bumpFactVersion, registerSceneDependency, appendEvent } from './buz/ledger.buzz.js';

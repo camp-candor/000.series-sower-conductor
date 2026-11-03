@@ -1,2 +1,1 @@
-export { initSqlite } from './buz/sqlite.buzz'
-export { updateSqlite } from './buz/sqlite.buzz'
+export { initSqlite, openSqliteLedger, closeSqliteLedger } from './buz/sqlite.buzz.js';
