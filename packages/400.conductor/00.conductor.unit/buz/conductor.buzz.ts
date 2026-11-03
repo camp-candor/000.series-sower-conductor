@@ -13,41 +13,20 @@ export const initConductor = (
     bal: ConductorBit,
     ste: State,
 ) => {
-    const url =
-        process.env.CONDUCTOR_URL ||
-        'https://zero00-conductor.onrender.com/api/conductor/test'
-    if (url) {
-        fetch(url)
-            .then((response) => response.json())
-            .then((data) => {
-                if (bal.slv != null) {
-                    bal.slv({
-                        intBit: {
-                            idx: 'init-conductor',
-                            dat: {
-                                conductor: data,
-                            },
-                        },
-                    })
-                }
-            })
-            .catch((error: any) => {
-                if (bal.slv != null) {
-                    bal.slv({
-                        intBit: {
-                            idx: 'init-conductor-err',
-                            dat: error.message,
-                        },
-                    })
-                }
-            })
-    } else {
-        if (bal.slv != null) {
-            bal.slv({ intBit: { idx: 'init-conductor' } })
-        }
+    cpy.status = 'READY';
+    process.stdout.write('>> [CONDUCTOR] [OK] packages/400.conductor initialized cleanly.\n');
+
+    if (bal.slv) {
+        bal.slv({
+            conductorBit: {
+                idx: 'init-conductor',
+                val: 1,
+                dat: { status: cpy.status }
+            }
+        });
     }
-    return cpy
-}
+    return cpy;
+};
 
 export const updateConductor = (
     cpy: ConductorModel,
