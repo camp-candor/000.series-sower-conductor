@@ -1,2 +1,1 @@
-export { initLogistic } from './buz/logistic.buzz.js'
-export { updateLogistic } from './buz/logistic.buzz.js'
+export { initLogistic, compileSpokePayload, dispatchSpokePayload } from './buz/logistic.buzz.js';
