@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     //  "declaration": true,
-    "module": "commonjs",
+    "module": "esnext",
     "target": "es2018",
     "incremental": true,
     "isolatedModules": true,
