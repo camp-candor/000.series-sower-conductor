@@ -1,4 +1,5 @@
 import ConductorUnit from './00.conductor.unit/conductor.unit.js';
+import LogisticUnit from './04.logistic.unit/logistic.unit.js';
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js';
 import SpeechUnit from './09.speech.unit/speech.unit.js';
 import SomaticdspUnit from './10.somaticdsp.unit/somaticdsp.unit.js';
@@ -16,6 +17,7 @@ import { Model } from './99.core/interface/model.interface.js';
 
 export const list: Array<any> = [
   ConductorUnit,
+  LogisticUnit,
   SqliteUnit,
   SpeechUnit,
   SomaticdspUnit,
@@ -32,6 +34,7 @@ export const list: Array<any> = [
 ];
 
 import * as reduceFromConductor from './00.conductor.unit/conductor.reduce.js';
+import * as reduceFromLogistic from './04.logistic.unit/logistic.reduce.js';
 import * as reduceFromSqlite from './08.sqlite.unit/sqlite.reduce.js';
 import * as reduceFromSpeech from './09.speech.unit/speech.reduce.js';
 import * as reduceFromSomaticdsp from './10.somaticdsp.unit/somaticdsp.reduce.js';
@@ -48,6 +51,7 @@ import * as reduceFromAST from './34.abstractsyntaxtree.unit/abstractsyntaxtree.
 
 export const reducer: any = {
   conductor: reduceFromConductor.reducer,
+  logistic: reduceFromLogistic.reducer,
   sqlite: reduceFromSqlite.reducer,
   speech: reduceFromSpeech.reducer,
   somaticdsp: reduceFromSomaticdsp.reducer,
@@ -67,6 +71,7 @@ export const reducer: any = {
 export default class UnitData implements Model {
   idx: string = '400.conductor';
   conductor: any;
+  logistic: any;
   sqlite: any;
   speech: any;
   somaticdsp: any;
