@@ -16,6 +16,9 @@ export function reducer(
         case Act.INIT_CONDUCTOR:
             return Buzz.initConductor(clone(model), act.bale, state)
 
+        case Act.RUN_SCENE_LIFECYCLE:
+            return Buzz.runSceneLifecycle(clone(model), act.bale, state)
+
         case Act.TEST_CONDUCTOR:
             return Buzz.testConductor(clone(model), act.bale, state)
 
