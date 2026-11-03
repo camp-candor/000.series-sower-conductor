@@ -1,142 +1,194 @@
-/* eslint-disable */
+import { MenuModel } from '../menu.model.js'
+import MenuBit from '../fce/menu.bit.js'
+import State from '../../99.core/state.js'
 import * as ActMnu from '../menu.action.js'
-//import * as ActAgt from '../../00.agent.unit/agent.action.js';
-import * as ActOlm from '../../00.conductor.unit/conductor.action.js'
+import * as ActCnd from '../../00.conductor.unit/conductor.action.js'
+import * as ActCpu from '../../28.cpus.unit/cpus.action.js'
+import * as ActCud from '../../27.cuda.unit/cuda.action.js'
+import * as ActSql from '../../08.sqlite.unit/sqlite.action.js'
+import * as ActAst from '../../33.asset.unit/asset.action.js'
+import * as ActVrm from '../../26.vram.unit/vram.action.js'
 
-import type { MenuModel } from '../menu.model.js'
-import type MenuBit from '../fce/menu.bit.js'
-import type State from '../../99.core/state.js'
+let rootResolver: Function | null = null
 
-import * as Grid from '../../val/grid.js'
-import * as Align from '../../val/align.js'
-import * as Color from '../../val/console-color.js'
-
-import * as SHAPE from '../../val/shape.js'
-import * as FOCUS from '../../val/focus.js'
-
-let bit, lst, dex, idx, dat, src, val
-let rootSlv
-
-let SOWER, AGENT, CLICKUP, CONDUCTOR
-
-const UPDATE_GRID = '[Grid action] Update Grid'
-const WRITE_CONSOLE = '[Write action] Write Console'
-const UPDATE_CONSOLE = '[Console action] Update Console'
-const OPEN_CHOICE = '[Open action] Open Choice'
-const CLOSE_TERMINAL = '[Close action] Close Terminal'
-const PRINT_MENU = '[Render action] Print Menu'
+export const logToConsole = async (ste: State, msg: string): Promise<void> => {
+    const lib = (globalThis as any).LIBRARY
+    if (lib && typeof lib.hunt === 'function') {
+        await lib.hunt('[Console action] Update Console', {
+            idx: 'cns00',
+            src: msg,
+        })
+    } else {
+        process.stdout.write(`${msg}\n`)
+    }
+}
 
 export const initMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
-    if (bal.slv != null) rootSlv = bal.slv
+    const cns = '>> [FLIGHT-DECK]'
+    if (bal.slv) rootResolver = bal.slv
 
-    bit = await global.LIBRARY.hunt(UPDATE_GRID, {
-        x: 4,
-        y: 0,
-        xSpan: 8,
-        ySpan: 12,
-    })
-    bit = await global.LIBRARY.hunt(WRITE_CONSOLE, {
-        idx: 'cns00',
-        src: '',
-        dat: { net: bit.grdBit.dat, src: 'alligaor0' },
-    })
+    const lib = (globalThis as any).LIBRARY
+    if (lib && typeof lib.hunt === 'function') {
+        await lib.hunt('[Grid action] Update Grid', {
+            x: 4,
+            y: 0,
+            xSpan: 8,
+            ySpan: 12,
+        })
+    }
 
-    bit = await global.LIBRARY.hunt(UPDATE_CONSOLE, {
-        idx: 'cns00',
-        src: '-----------',
-    })
-    bit = await global.LIBRARY.hunt(UPDATE_CONSOLE, {
-        idx: 'cns00',
-        src: 'CONDUCTOR MENU',
-    })
+    await logToConsole(
+        ste,
+        '================================================================',
+    )
+    await logToConsole(
+        ste,
+        '>> SERIES SOWER CONDUCTOR // FLIGHT DECK (packages/400.conductor)',
+    )
+    await logToConsole(
+        ste,
+        '>> HOST: RIG 1 | ZERO-VRAM POLICY: ENFORCED | T_0: $0.00 SPEND',
+    )
+    await logToConsole(
+        ste,
+        '================================================================',
+    )
 
-    bit = await global.LIBRARY.hunt(UPDATE_CONSOLE, {
-        idx: 'cns00',
-        src: '-----------',
-    })
-
-    await updateMenu(cpy, bal, ste)
-
+    cpy.statusMessage = 'READY'
+    if (bal.slv && !bal.src) {
+        bal.slv({ menuBit: { idx: 'init-menu', val: 1 } })
+    }
     return cpy
 }
 
 export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
-    lst = [
-        ActOlm.UPDATE_CONDUCTOR.split(']')[1],
-        ActOlm.TEST_CONDUCTOR.split(']')[1],
-        ActOlm.LIST_CONDUCTOR.split(']')[1],
+    const lib = (globalThis as any).LIBRARY
+
+    const choices = [
+        'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
+        'VERIFY RIG 1 HARDWARE & ZERO-VRAM',
+        'INSPECT SQLITE CONTINUITY LEDGER',
+        'VERIFY 3D ASSET TREE PARITY',
+        'TRIGGER PRE-SYNTHESIS VRAM FLUSH',
         'ROOT MENU',
     ]
 
-    bit = await global.LIBRARY.hunt(UPDATE_GRID, {
+    const tooltips: Record<string, string> = {
+        'RUN MASTER SCENE LIFECYCLE (ep01_sc01)':
+            '- Execute fail-closed 4-step pipeline:\n  AST Parse -> Continuity -> VRAM Flush -> Speech Synthesis.',
+        'VERIFY RIG 1 HARDWARE & ZERO-VRAM':
+            '- Inspect CPU cores, RAM floor, POSIX binaries (ffprobe, git),\n  and enforce 0MB dedicated VRAM on Rig 1.',
+        'INSPECT SQLITE CONTINUITY LEDGER':
+            '- Query local SQLite fact ledger (pilot.db)\n  and assert WAL pragmas & trigger health.',
+        'VERIFY 3D ASSET TREE PARITY':
+            '- Verify live Git tree hashes for characters, environments,\n  and props against manifest.json at T_0 = $0.00.',
+        'TRIGGER PRE-SYNTHESIS VRAM FLUSH':
+            '- Dispatch POST :8188/free and poll memory\n  until GPU free VRAM recovers to baseline envelope.',
+        'ROOT MENU': '- Return to the main library switchboard.',
+    }
+
+    if (!lib || typeof lib.hunt !== 'function') {
+        // Headless testing execution fallback
+        cpy.activeSelection = bal.src || 'HEADLESS'
+        cpy.lastActionTimestamp = Date.now()
+        if (bal.slv)
+            bal.slv({
+                menuBit: {
+                    idx: 'update-menu-headless',
+                    val: 1,
+                    src: cpy.activeSelection,
+                },
+            })
+        return cpy
+    }
+
+    const selection = await lib.hunt('[Open action] Open Choice', {
         x: 0,
         y: 4,
         xSpan: 4,
         ySpan: 8,
-    })
-    bit = await global.LIBRARY.hunt(OPEN_CHOICE, {
-        dat: { clr0: Color.BLACK, clr1: Color.YELLOW },
-        src: Align.VERTICAL,
-        lst,
-        net: bit.grdBit.dat,
+        lst: choices,
+        cb: async (focusedItem: string) => {
+            const tip = tooltips[focusedItem]
+            if (tip) await logToConsole(ste, `:: [HELP] ${focusedItem}\n${tip}`)
+        },
     })
 
-    src = bit.chcBit.src
+    const choice = selection?.src || selection?.openBit?.src || ''
+    cpy.activeSelection = choice
+    cpy.lastActionTimestamp = Date.now()
 
-    switch (src) {
-        case ActOlm.UPDATE_CONDUCTOR.split(']')[1]:
-            bit = await ste.hunt(ActOlm.UPDATE_CONDUCTOR, {
-                content: 'Conductor Menu Selected',
+    switch (choice) {
+        case 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)':
+            await logToConsole(
+                ste,
+                '>> [EXEC] Launching Master Scene Lifecycle for ep01_sc01...',
+            )
+            await ste.hunt(ActCnd.RUN_SCENE_LIFECYCLE, {
+                src: 'drafts/dialogue_ast.json',
             })
-            bit = await global.LIBRARY.hunt(PRINT_MENU, bit)
             break
 
-        case ActOlm.TEST_CONDUCTOR.split(']')[1]:
-            bit = await ste.hunt(ActOlm.TEST_CONDUCTOR, {
-                content: 'Conductor Menu Selected',
-            })
-            bit = await global.LIBRARY.hunt(PRINT_MENU, bit)
+        case 'VERIFY RIG 1 HARDWARE & ZERO-VRAM':
+            await logToConsole(
+                ste,
+                '>> [EXEC] Auditing Rig 1 POSIX Hardware & Zero-VRAM policy...',
+            )
+            await ste.hunt(ActCpu.VERIFY_HARDWARE_PREFLIGHT, {})
+            await ste.hunt(ActCud.ASSERT_ZERO_VRAM, {})
             break
 
-        case ActOlm.LIST_CONDUCTOR.split(']')[1]:
-            bit = await ste.hunt(ActOlm.LIST_CONDUCTOR, {})
-            lst = bit.olmBit.lst
+        case 'INSPECT SQLITE CONTINUITY LEDGER':
+            await logToConsole(
+                ste,
+                '>> [EXEC] Opening local SQLite Continuity Ledger (pilot.db)...',
+            )
+            await ste.hunt(ActSql.OPEN_SQLITE_LEDGER, {
+                src: 'data/sqlite/pilot.db',
+            })
+            break
 
-            if (lst.length === 0) {
-                bit = await global.LIBRARY.hunt(UPDATE_CONSOLE, {
-                    idx: 'cns00',
-                    src: 'No Conductor Models Found',
-                })
-            } else {
-                bit = await global.LIBRARY.hunt(UPDATE_CONSOLE, {
-                    idx: 'cns00',
-                    src: 'Listing Conductor Models...',
-                })
-                lst.forEach((a: string) =>
-                    global.LIBRARY.hunt(UPDATE_CONSOLE, {
-                        idx: 'cns00',
-                        src: a,
-                    }),
-                )
-            }
+        case 'VERIFY 3D ASSET TREE PARITY':
+            await logToConsole(
+                ste,
+                '>> [EXEC] Verifying 3D Asset Tree Parity against manifest.json...',
+            )
+            await ste.hunt(ActAst.VERIFY_ASSET_PARITY, {
+                src: 'wiregrass-basin',
+            })
+            break
 
-            await new Promise((resolve) => setTimeout(resolve, 3000))
+        case 'TRIGGER PRE-SYNTHESIS VRAM FLUSH':
+            await logToConsole(
+                ste,
+                '>> [EXEC] Triggering ComfyUI Port 8188 VRAM Evacuation...',
+            )
+            await ste.hunt(ActVrm.EXECUTE_VRAM_HYGIENE, {
+                src: 'http://127.0.0.1:8188',
+            })
             break
 
         case 'ROOT MENU':
-            if (rootSlv != null) rootSlv({ mnuBit: { idx: 'root-menu' } })
+            if (rootResolver) {
+                rootResolver({ menuBit: { idx: 'root-menu', val: 1 } })
+            }
+            if (bal.slv) {
+                bal.slv({ menuBit: { idx: 'root-menu', val: 1 } })
+            }
             return cpy
 
         default:
-            bit = await ste.hunt(CLOSE_TERMINAL, {})
+            await logToConsole(
+                ste,
+                `:: [WARN] Unhandled menu selection: ${choice}`,
+            )
             break
     }
 
+    // Schedule next menu render tick non-recursively
     setTimeout(async () => {
-        bit = await ste.hunt(ActMnu.UPDATE_MENU, {})
+        await ste.hunt(ActMnu.UPDATE_MENU, {})
     }, 333)
 
     return cpy
 }
-
-const patch = (ste, type, bale) => ste.dispatch({ type, bale })

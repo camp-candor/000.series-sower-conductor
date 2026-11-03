@@ -1,22 +1,21 @@
 import clone from 'clone-deep'
 import * as Act from './menu.action.js'
-import { MenuModel } from './menu.model.js'
 import * as Buzz from './menu.buzzer.js'
+import { MenuModel } from './menu.model.js'
 import State from '../99.core/state.js'
 
-export function reducer(
-    model: MenuModel = new MenuModel(),
+export const reducer = (
+    model: any = new MenuModel(),
     act: Act.Actions,
-    state?: State,
-) {
+    state: State,
+) => {
+    const cpy = clone(model)
     switch (act.type) {
-        case Act.UPDATE_MENU:
-            return Buzz.updateMenu(clone(model), act.bale, state)
-
         case Act.INIT_MENU:
-            return Buzz.initMenu(clone(model), act.bale, state)
-
+            return Buzz.initMenu(cpy, act.bale, state)
+        case Act.UPDATE_MENU:
+            return Buzz.updateMenu(cpy, act.bale, state)
         default:
-            return model
+            return cpy
     }
 }

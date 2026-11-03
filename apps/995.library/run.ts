@@ -11,7 +11,11 @@ const require = createRequire(import.meta.url)
 const exec = promisify(execCb)
 
 // 1. Setup CLI
-program.option('--first').option('-t, --separator <char>')
+program
+    .option('--first')
+    .option('-t, --separator <char>')
+    .option('--conductor', 'Target Conductor flight deck')
+    .option('--package <name>', 'Target specific package')
 program.parse(process.argv)
 const options = program.opts()
 
@@ -117,7 +121,9 @@ const init = async () => {
     global.window = global as any
     ;(global as any).PIVOTS = (global as any).PIVOTS || {}
 
-    const idx = options.separator
+    const idx = options.conductor
+        ? 'conductor'
+        : options.package || options.separator
     if (idx) console.log(`   Targeting: ${idx}`)
 
     const libPath = path.resolve(import.meta.dirname, './dist/995.library')
