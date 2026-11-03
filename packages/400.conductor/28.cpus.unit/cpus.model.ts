@@ -1,8 +1,5 @@
-import Cpus from './fce/cpus.interface'
-import CpusBit from './fce/cpus.interface'
+import Cpus from './fce/cpus.interface.js';
 
 export class CpusModel implements Cpus {
-    //idx:string;
-    //cpusBitList: CpusBit[] = [];
-    //cpusBits: any = {};
+  idx: string = '28.cpus.unit';
 }

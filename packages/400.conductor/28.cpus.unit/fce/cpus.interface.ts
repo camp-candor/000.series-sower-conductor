@@ -1,7 +1,3 @@
-import CpusBit from './cpus.bit'
+import { Model } from '../../99.core/interface/model.interface.js';
 
-export default interface Cpus {
-    // idx:string;
-    // cpusBitList: CpusBit[];
-    // cpusBits:any;
-}
+export default interface Cpus extends Model {}

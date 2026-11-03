@@ -1,8 +1,7 @@
-import Cuda from './fce/cuda.interface'
-import CudaBit from './fce/cuda.interface'
+import Cuda from './fce/cuda.interface.js';
 
 export class CudaModel implements Cuda {
-    //idx:string;
-    //cudaBitList: CudaBit[] = [];
-    //cudaBits: any = {};
+  idx: string = '27.cuda.unit';
+  zeroVramEnforced: boolean = false;
+  gpuOverrideActive: boolean = false;
 }

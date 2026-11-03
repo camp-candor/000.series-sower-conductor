@@ -1,7 +1,6 @@
-import CudaBit from './cuda.bit'
+import { Model } from '../../99.core/interface/model.interface.js';
 
-export default interface Cuda {
-    // idx:string;
-    // cudaBitList: CudaBit[];
-    // cudaBits:any;
+export default interface Cuda extends Model {
+  zeroVramEnforced: boolean;
+  gpuOverrideActive: boolean;
 }
