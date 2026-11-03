@@ -1,8 +1,8 @@
-import Frame from './fce/frame.interface.js'
-import FrameBit from './fce/frame.interface.js'
+import Frame, { ExposureSheetManifest } from './fce/frame.interface.js';
 
 export class FrameModel implements Frame {
-    //idx:string;
-    //frameBitList: FrameBit[] = [];
-    //frameBits: any = {};
+  idx: string = '24.frame.unit';
+  deliveryFps: number = 24;
+  totalScenesQuantized: number = 0;
+  lastExposureSheet: ExposureSheetManifest | null = null;
 }
