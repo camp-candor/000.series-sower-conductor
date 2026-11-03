@@ -1,2 +1,1 @@
-export { initFrame } from './buz/frame.buzz.js'
-export { updateFrame } from './buz/frame.buzz.js'
+export { initFrame, quantizeStemDuration, compileTimelineBudget } from './buz/frame.buzz.js';
