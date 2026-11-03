@@ -1,4 +1,4 @@
-import CharacterBit from './character.bit'
+import CharacterBit from './character.bit.js'
 
 export default interface Character {
     // idx:string;

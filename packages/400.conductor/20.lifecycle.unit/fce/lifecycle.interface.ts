@@ -1,4 +1,4 @@
-import LifecycleBit from './lifecycle.bit'
+import LifecycleBit from './lifecycle.bit.js'
 
 export default interface Lifecycle {
     // idx:string;

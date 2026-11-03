@@ -1,5 +1,5 @@
 export const initEpisode = (cpy: EpisodeModel, bal: EpisodeBit, ste: State) => {
-    debugger
+
     return cpy
 }
 
@@ -11,6 +11,6 @@ export const updateEpisode = (
     return cpy
 }
 
-import { EpisodeModel } from '../episode.model'
-import EpisodeBit from '../fce/episode.bit'
-import State from '../../99.core/state'
+import { EpisodeModel } from '../episode.model.js'
+import EpisodeBit from '../fce/episode.bit.js'
+import State from '../../99.core/state.js'

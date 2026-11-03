@@ -1,5 +1,5 @@
-import Vram from './fce/vram.interface'
-import VramBit from './fce/vram.interface'
+import Vram from './fce/vram.interface.js'
+import VramBit from './fce/vram.interface.js'
 
 export class VramModel implements Vram {
     //idx:string;

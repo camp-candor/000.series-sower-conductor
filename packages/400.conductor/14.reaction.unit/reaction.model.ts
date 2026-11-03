@@ -1,5 +1,5 @@
-import Reaction from './fce/reaction.interface'
-import ReactionBit from './fce/reaction.interface'
+import Reaction from './fce/reaction.interface.js'
+import ReactionBit from './fce/reaction.interface.js'
 
 export class ReactionModel implements Reaction {
     //idx:string;

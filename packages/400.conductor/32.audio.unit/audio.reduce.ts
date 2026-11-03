@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './audio.action'
-import { AudioModel } from './audio.model'
-import * as Buzz from './audio.buzzer'
-import State from '../99.core/state'
+import * as Act from './audio.action.js'
+import { AudioModel } from './audio.model.js'
+import * as Buzz from './audio.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: AudioModel = new AudioModel(),

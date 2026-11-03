@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import PipelineBit from './fce/pipeline.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import PipelineBit from './fce/pipeline.bit.js'
 
 // Pipeline actions
 

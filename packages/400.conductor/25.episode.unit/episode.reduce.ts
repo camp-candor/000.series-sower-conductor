@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './episode.action'
-import { EpisodeModel } from './episode.model'
-import * as Buzz from './episode.buzzer'
-import State from '../99.core/state'
+import * as Act from './episode.action.js'
+import { EpisodeModel } from './episode.model.js'
+import * as Buzz from './episode.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: EpisodeModel = new EpisodeModel(),

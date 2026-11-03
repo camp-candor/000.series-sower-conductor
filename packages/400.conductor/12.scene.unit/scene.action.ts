@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import SceneBit from './fce/scene.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import SceneBit from './fce/scene.bit.js'
 
 // Scene actions
 

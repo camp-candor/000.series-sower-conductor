@@ -1,12 +1,14 @@
-export const initFrame = (cpy: FrameModel, bal: FrameBit, ste: State) => {
-    debugger
-    return cpy
-}
+import { FrameModel } from '../frame.model.js';
+import FrameBit from '../fce/frame.bit.js';
+import State from '../../99.core/state.js';
 
-export const updateFrame = (cpy: FrameModel, bal: FrameBit, ste: State) => {
-    return cpy
-}
+export const initFrame = (cpy: FrameModel, bal: FrameBit, _ste: State) => {
+  if (bal.slv) bal.slv({ frameBit: { idx: 'init-frame', val: 1 } });
+  return cpy;
+};
 
-import { FrameModel } from '../frame.model'
-import FrameBit from '../fce/frame.bit'
-import State from '../../99.core/state'
+export const updateFrame = (cpy: FrameModel, bal: FrameBit, _ste: State) => {
+  if (bal.slv) bal.slv({ frameBit: { idx: 'update-frame', val: 1 } });
+  return cpy;
+};
+

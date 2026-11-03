@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import CameraBit from './fce/camera.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import CameraBit from './fce/camera.bit.js'
 
 // Camera actions
 

@@ -1,5 +1,5 @@
-import Health from './fce/health.interface'
-import HealthBit from './fce/health.interface'
+import Health from './fce/health.interface.js'
+import HealthBit from './fce/health.interface.js'
 
 export class HealthModel implements Health {
     //idx:string;

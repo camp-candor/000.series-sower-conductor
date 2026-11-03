@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './health.action'
-import { HealthModel } from './health.model'
-import * as Buzz from './health.buzzer'
-import State from '../99.core/state'
+import * as Act from './health.action.js'
+import { HealthModel } from './health.model.js'
+import * as Buzz from './health.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: HealthModel = new HealthModel(),

@@ -1,2 +1,2 @@
-export { initSomaticdsp } from './buz/somaticdsp.buzz'
-export { updateSomaticdsp } from './buz/somaticdsp.buzz'
+export { initSomaticdsp } from './buz/somaticdsp.buzz.js'
+export { updateSomaticdsp } from './buz/somaticdsp.buzz.js'

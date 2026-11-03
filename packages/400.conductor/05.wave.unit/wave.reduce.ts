@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './wave.action'
-import { WaveModel } from './wave.model'
-import * as Buzz from './wave.buzzer'
-import State from '../99.core/state'
+import * as Act from './wave.action.js'
+import { WaveModel } from './wave.model.js'
+import * as Buzz from './wave.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: WaveModel = new WaveModel(),

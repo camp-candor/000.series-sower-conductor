@@ -1,4 +1,4 @@
-import HealthBit from './health.bit'
+import HealthBit from './health.bit.js'
 
 export default interface Health {
     // idx:string;

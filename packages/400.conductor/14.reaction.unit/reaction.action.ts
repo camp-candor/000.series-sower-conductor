@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import ReactionBit from './fce/reaction.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import ReactionBit from './fce/reaction.bit.js'
 
 // Reaction actions
 

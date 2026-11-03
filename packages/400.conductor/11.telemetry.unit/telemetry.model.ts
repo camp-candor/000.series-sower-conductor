@@ -1,5 +1,5 @@
-import Telemetry from './fce/telemetry.interface'
-import TelemetryBit from './fce/telemetry.interface'
+import Telemetry from './fce/telemetry.interface.js'
+import TelemetryBit from './fce/telemetry.interface.js'
 
 export class TelemetryModel implements Telemetry {
     //idx:string;

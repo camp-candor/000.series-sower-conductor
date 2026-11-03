@@ -1,2 +1,2 @@
-export { initFrame } from './buz/frame.buzz'
-export { updateFrame } from './buz/frame.buzz'
+export { initFrame } from './buz/frame.buzz.js'
+export { updateFrame } from './buz/frame.buzz.js'

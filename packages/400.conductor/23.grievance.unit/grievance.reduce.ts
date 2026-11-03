@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './grievance.action'
-import { GrievanceModel } from './grievance.model'
-import * as Buzz from './grievance.buzzer'
-import State from '../99.core/state'
+import * as Act from './grievance.action.js'
+import { GrievanceModel } from './grievance.model.js'
+import * as Buzz from './grievance.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: GrievanceModel = new GrievanceModel(),

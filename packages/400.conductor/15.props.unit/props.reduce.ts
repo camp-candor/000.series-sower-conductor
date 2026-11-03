@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './props.action'
-import { PropsModel } from './props.model'
-import * as Buzz from './props.buzzer'
-import State from '../99.core/state'
+import * as Act from './props.action.js'
+import { PropsModel } from './props.model.js'
+import * as Buzz from './props.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: PropsModel = new PropsModel(),

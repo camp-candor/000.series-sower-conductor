@@ -1,4 +1,4 @@
-import EpisodeBit from './episode.bit'
+import EpisodeBit from './episode.bit.js'
 
 export default interface Episode {
     // idx:string;

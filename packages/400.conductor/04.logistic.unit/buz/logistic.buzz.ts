@@ -3,7 +3,7 @@ export const initLogistic = (
     bal: LogisticBit,
     ste: State,
 ) => {
-    debugger
+
     return cpy
 }
 
@@ -15,6 +15,6 @@ export const updateLogistic = (
     return cpy
 }
 
-import { LogisticModel } from '../logistic.model'
-import LogisticBit from '../fce/logistic.bit'
-import State from '../../99.core/state'
+import { LogisticModel } from '../logistic.model.js'
+import LogisticBit from '../fce/logistic.bit.js'
+import State from '../../99.core/state.js'

@@ -1,4 +1,4 @@
-import VramBit from './vram.bit'
+import VramBit from './vram.bit.js'
 
 export default interface Vram {
     // idx:string;

@@ -3,7 +3,7 @@ export const initLifecycle = (
     bal: LifecycleBit,
     ste: State,
 ) => {
-    debugger
+
     return cpy
 }
 
@@ -15,6 +15,6 @@ export const updateLifecycle = (
     return cpy
 }
 
-import { LifecycleModel } from '../lifecycle.model'
-import LifecycleBit from '../fce/lifecycle.bit'
-import State from '../../99.core/state'
+import { LifecycleModel } from '../lifecycle.model.js'
+import LifecycleBit from '../fce/lifecycle.bit.js'
+import State from '../../99.core/state.js'

@@ -1,12 +1,14 @@
-export const initHealth = (cpy: HealthModel, bal: HealthBit, ste: State) => {
-    debugger
-    return cpy
-}
+import { HealthModel } from '../health.model.js';
+import HealthBit from '../fce/health.bit.js';
+import State from '../../99.core/state.js';
 
-export const updateHealth = (cpy: HealthModel, bal: HealthBit, ste: State) => {
-    return cpy
-}
+export const initHealth = (cpy: HealthModel, bal: HealthBit, _ste: State) => {
+  if (bal.slv) bal.slv({ healthBit: { idx: 'init-health', val: 1 } });
+  return cpy;
+};
 
-import { HealthModel } from '../health.model'
-import HealthBit from '../fce/health.bit'
-import State from '../../99.core/state'
+export const updateHealth = (cpy: HealthModel, bal: HealthBit, _ste: State) => {
+  if (bal.slv) bal.slv({ healthBit: { idx: 'update-health', val: 1 } });
+  return cpy;
+};
+

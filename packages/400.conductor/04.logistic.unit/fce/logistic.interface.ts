@@ -1,4 +1,4 @@
-import LogisticBit from './logistic.bit'
+import LogisticBit from './logistic.bit.js'
 
 export default interface Logistic {
     // idx:string;

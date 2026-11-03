@@ -1,4 +1,4 @@
-import AudioBit from './audio.bit'
+import AudioBit from './audio.bit.js'
 
 export default interface Audio {
     // idx:string;

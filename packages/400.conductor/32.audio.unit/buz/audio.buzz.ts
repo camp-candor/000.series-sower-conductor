@@ -1,12 +1,14 @@
-export const initAudio = (cpy: AudioModel, bal: AudioBit, ste: State) => {
-    debugger
-    return cpy
-}
+import { AudioModel } from '../audio.model.js';
+import AudioBit from '../fce/audio.bit.js';
+import State from '../../99.core/state.js';
 
-export const updateAudio = (cpy: AudioModel, bal: AudioBit, ste: State) => {
-    return cpy
-}
+export const initAudio = (cpy: AudioModel, bal: AudioBit, _ste: State) => {
+  if (bal.slv) bal.slv({ audioBit: { idx: 'init-audio', val: 1 } });
+  return cpy;
+};
 
-import { AudioModel } from '../audio.model'
-import AudioBit from '../fce/audio.bit'
-import State from '../../99.core/state'
+export const updateAudio = (cpy: AudioModel, bal: AudioBit, _ste: State) => {
+  if (bal.slv) bal.slv({ audioBit: { idx: 'update-audio', val: 1 } });
+  return cpy;
+};
+

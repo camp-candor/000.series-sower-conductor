@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './lifecycle.action'
-import { LifecycleModel } from './lifecycle.model'
-import * as Buzz from './lifecycle.buzzer'
-import State from '../99.core/state'
+import * as Act from './lifecycle.action.js'
+import { LifecycleModel } from './lifecycle.model.js'
+import * as Buzz from './lifecycle.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: LifecycleModel = new LifecycleModel(),

@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import CharacterBit from './fce/character.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import CharacterBit from './fce/character.bit.js'
 
 // Character actions
 

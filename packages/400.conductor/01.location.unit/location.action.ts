@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import LocationBit from './fce/location.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import LocationBit from './fce/location.bit.js'
 
 // Location actions
 

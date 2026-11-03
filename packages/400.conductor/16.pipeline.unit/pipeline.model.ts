@@ -1,5 +1,5 @@
-import Pipeline from './fce/pipeline.interface'
-import PipelineBit from './fce/pipeline.interface'
+import Pipeline from './fce/pipeline.interface.js'
+import PipelineBit from './fce/pipeline.interface.js'
 
 export class PipelineModel implements Pipeline {
     //idx:string;

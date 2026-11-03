@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './frame.action'
-import { FrameModel } from './frame.model'
-import * as Buzz from './frame.buzzer'
-import State from '../99.core/state'
+import * as Act from './frame.action.js'
+import { FrameModel } from './frame.model.js'
+import * as Buzz from './frame.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: FrameModel = new FrameModel(),

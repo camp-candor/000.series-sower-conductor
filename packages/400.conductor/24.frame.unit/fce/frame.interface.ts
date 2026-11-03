@@ -1,4 +1,4 @@
-import FrameBit from './frame.bit'
+import FrameBit from './frame.bit.js'
 
 export default interface Frame {
     // idx:string;

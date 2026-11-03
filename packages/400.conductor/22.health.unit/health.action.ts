@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import HealthBit from './fce/health.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import HealthBit from './fce/health.bit.js'
 
 // Health actions
 

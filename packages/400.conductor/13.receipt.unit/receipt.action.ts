@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import ReceiptBit from './fce/receipt.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import ReceiptBit from './fce/receipt.bit.js'
 
 // Receipt actions
 

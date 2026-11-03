@@ -1,5 +1,5 @@
 export const initVram = (cpy: VramModel, bal: VramBit, ste: State) => {
-    debugger
+
     return cpy
 }
 
@@ -7,6 +7,6 @@ export const updateVram = (cpy: VramModel, bal: VramBit, ste: State) => {
     return cpy
 }
 
-import { VramModel } from '../vram.model'
-import VramBit from '../fce/vram.bit'
-import State from '../../99.core/state'
+import { VramModel } from '../vram.model.js'
+import VramBit from '../fce/vram.bit.js'
+import State from '../../99.core/state.js'

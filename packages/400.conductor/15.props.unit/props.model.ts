@@ -1,5 +1,5 @@
-import Props from './fce/props.interface'
-import PropsBit from './fce/props.interface'
+import Props from './fce/props.interface.js'
+import PropsBit from './fce/props.interface.js'
 
 export class PropsModel implements Props {
     //idx:string;

@@ -1,4 +1,4 @@
-import NarrativeBit from './narrative.bit'
+import NarrativeBit from './narrative.bit.js'
 
 export default interface Narrative {
     // idx:string;

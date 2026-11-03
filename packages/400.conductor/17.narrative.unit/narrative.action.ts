@@ -1,5 +1,5 @@
-import { Action } from '../99.core/interface/action.interface'
-import NarrativeBit from './fce/narrative.bit'
+import { Action } from '../99.core/interface/action.interface.js'
+import NarrativeBit from './fce/narrative.bit.js'
 
 // Narrative actions
 

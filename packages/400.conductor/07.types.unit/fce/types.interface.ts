@@ -1,4 +1,4 @@
-import TypesBit from './types.bit'
+import TypesBit from './types.bit.js'
 
 export default interface Types {
     // idx:string;

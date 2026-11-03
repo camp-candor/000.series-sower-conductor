@@ -1,8 +1,8 @@
 import clone from 'clone-deep'
-import * as Act from './memory.action'
-import { MemoryModel } from './memory.model'
-import * as Buzz from './memory.buzzer'
-import State from '../99.core/state'
+import * as Act from './memory.action.js'
+import { MemoryModel } from './memory.model.js'
+import * as Buzz from './memory.buzzer.js'
+import State from '../99.core/state.js'
 
 export function reducer(
     model: MemoryModel = new MemoryModel(),

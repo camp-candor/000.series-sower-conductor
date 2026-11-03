@@ -1,4 +1,4 @@
-import PropsBit from './props.bit'
+import PropsBit from './props.bit.js'
 
 export default interface Props {
     // idx:string;
