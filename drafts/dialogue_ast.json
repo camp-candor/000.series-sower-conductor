@@ -1,0 +1,31 @@
+{
+    "scene_id": "ep01_sc01",
+    "episode_number": 1,
+    "sequence_index": 0,
+    "state_snapshot_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+    "pinned_fact_version": 1,
+    "environment_id": "env_bunker",
+    "camera_framing": {
+        "shot_type": "CLOSE_UP",
+        "focal_entity_id": "char_bog"
+    },
+    "lines": [
+        {
+            "line_id": "line_001",
+            "speaker_id": "char_bog",
+            "dialogue_clean_ascii": "Seal the hatch.",
+            "emotional_tag": "COLD_RESENTMENT",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 1200,
+                "pitch_shift_cents": -50,
+                "breathiness_bps": 3400,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_door",
+                "intensity_bps": 4500
+            }
+        }
+    ]
+}

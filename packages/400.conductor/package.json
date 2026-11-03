@@ -8,6 +8,11 @@
         ".": "./BEE.ts",
         "./hunt": "./hunt.ts"
     },
+    "terminal": {
+        "globalKey": "CONDUCTOR",
+        "menuTitle": "CONDUCTOR MENU",
+        "menuDesc": "Open Conductor flight deck management console."
+    },
     "scripts": {
         "build": "tsc -b",
         "check:types": "tsc --noEmit",

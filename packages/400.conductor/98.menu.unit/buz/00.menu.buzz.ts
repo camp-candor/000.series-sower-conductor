@@ -55,6 +55,11 @@ export const initMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
     )
 
     cpy.statusMessage = 'READY'
+    if (lib && typeof lib.hunt === 'function') {
+        await updateMenu(cpy, bal, ste)
+        return cpy
+    }
+
     if (bal.slv && !bal.src) {
         bal.slv({ menuBit: { idx: 'init-menu', val: 1 } })
     }

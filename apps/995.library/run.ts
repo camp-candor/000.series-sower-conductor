@@ -200,15 +200,15 @@ const init = async () => {
             try {
                 let pkgDistPath = path.resolve(
                     import.meta.dirname,
-                    `../../packages/dist/${pkg.name}`,
+                    `../../packages/${pkg.name}/dist`,
                 )
                 if (!fs.existsSync(pkgDistPath)) {
-                    const localDist = path.resolve(
+                    const legacyDist = path.resolve(
                         import.meta.dirname,
-                        `../../packages/${pkg.name}/dist`,
+                        `../../packages/dist/${pkg.name}`,
                     )
-                    if (fs.existsSync(localDist)) {
-                        pkgDistPath = localDist
+                    if (fs.existsSync(legacyDist)) {
+                        pkgDistPath = legacyDist
                     } else {
                         pkgDistPath = pkg.targetDir
                     }
@@ -295,15 +295,15 @@ const init = async () => {
             if (target) {
                 let pkgDistPath = path.resolve(
                     import.meta.dirname,
-                    `../../packages/dist/${target.name}`,
+                    `../../packages/${target.name}/dist`,
                 )
                 if (!fs.existsSync(pkgDistPath)) {
-                    const localDist = path.resolve(
+                    const legacyDist = path.resolve(
                         import.meta.dirname,
-                        `../../packages/${target.name}/dist`,
+                        `../../packages/dist/${target.name}`,
                     )
-                    if (fs.existsSync(localDist)) {
-                        pkgDistPath = localDist
+                    if (fs.existsSync(legacyDist)) {
+                        pkgDistPath = legacyDist
                     } else {
                         pkgDistPath = target.targetDir
                     }
