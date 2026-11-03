@@ -1,7 +1,18 @@
 import { Hono } from 'hono'
-import { createAgentWorker } from '@funtuantw/pi-agent-cf'
-import { coreTools, type Env } from './tools.core.js'
+import { createAgentWorker, type AgentEnv } from '@funtuantw/pi-agent-cf'
+import { coreTools } from './tools.core.js'
 // import { customTools } from './tools.custom.js'
+
+export interface Env extends AgentEnv {
+    CLOUDFLARE_ACCOUNT_ID: string
+    CLOUDFLARE_API_TOKEN: string
+    CLOUDFLARE_AI_GATEWAY: string
+    CLOUDFLARE_AI_GATEWAY_TOKEN?: string
+    GITHUB_TOKEN: string
+    GITHUB_DEFAULT_OWNER?: string
+    AI: any
+    CANON_DB?: any
+}
 
 // ----------------------------------------------------------------------------
 // :: DETERMINISTIC LLM & DEVOPS SYSTEM PROMPT
@@ -27,18 +38,9 @@ const dynamicWorker = createAgentWorker<Env>({
         cfModel.baseUrl = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/ai/v1`
 
         return `
-You are repo-bot, the deterministic DevOps Control Plane and Git Mechanic.
-You possess a suite of deterministic Git and CI surveillance instruments:
-1. 'get_commit_sha': Captures the immutable base rollback anchor (S_clean) before modifying branches.
-2. 'create_ephemeral_branch': Creates an isolated work branch (spec/TASK-XX-<short-sha>). Direct commits to main are forbidden.
-3. 'write_repo_file': Writes bounded UTF-8 content to an ephemeral branch.
-4. 'create_pull_request': Opens a Pull Request from an ephemeral branch to trunk for validation.
-5. 'inspect_repo_checks': Queries repository commits and evaluates check-run CI outcomes.
-
-OPERATIONAL INVARIANTS:
-- Always capture S_clean via get_commit_sha before creating branches.
-- Never modify files directly on main or production tracking branches.
-- Output deterministic, structured summaries following tool execution.
+You are a deterministic edge isolate component executing read-only surveillance.
+Your only capability is to run the get_isolate_status tool to report memory and health telemetry.
+You cannot mutate repositories or cut branches.
         `.trim()
     },
     model: cfModel,
