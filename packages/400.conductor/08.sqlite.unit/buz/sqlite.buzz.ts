@@ -1,11 +1,11 @@
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-import { SqliteModel } from '../sqlite.model.js';
-import SqliteBit from '../fce/sqlite.bit.js';
-import State from '../../99.core/state.js';
+import Database from 'better-sqlite3'
+import fs from 'node:fs'
+import path from 'node:path'
+import { SqliteModel } from '../sqlite.model.js'
+import SqliteBit from '../fce/sqlite.bit.js'
+import State from '../../99.core/state.js'
 
-let dbInstance: Database.Database | null = null;
+let dbInstance: Database.Database | null = null
 
 export const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS facts (
@@ -119,87 +119,106 @@ export const SCHEMA_DDL = `
   BEGIN
     SELECT RAISE(ABORT, 'IMMUTABILITY_VIOLATION: Deletions strictly prohibited on event_log');
   END;
-`;
+`
 
 export const getSqliteInstance = (): Database.Database => {
-  if (!dbInstance) {
-    throw new Error('DATABASE_NOT_INITIALIZED: Invoke openSqliteLedger first.');
-  }
-  return dbInstance;
-};
+    if (!dbInstance) {
+        throw new Error(
+            'DATABASE_NOT_INITIALIZED: Invoke openSqliteLedger first.',
+        )
+    }
+    return dbInstance
+}
 
 export const initSqlite = (cpy: SqliteModel, bal: SqliteBit, _ste?: State) => {
-  if (bal.slv) bal.slv({ sqliteBit: { idx: 'init-sqlite', val: 1 } });
-  return cpy;
-};
+    if (bal.slv) bal.slv({ sqliteBit: { idx: 'init-sqlite', val: 1 } })
+    return cpy
+}
 
-export const openSqliteLedger = (cpy: SqliteModel, bal: SqliteBit, _ste?: State) => {
-  const targetPath = bal.src || cpy.dbPath || 'data/sqlite/pilot.db';
+export const openSqliteLedger = (
+    cpy: SqliteModel,
+    bal: SqliteBit,
+    _ste?: State,
+) => {
+    const targetPath = bal.src || cpy.dbPath || 'data/sqlite/pilot.db'
 
-  if (targetPath !== ':memory:') {
-    const resolvedPath = path.resolve(process.cwd(), targetPath);
-    const dir = path.dirname(resolvedPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  if (!dbInstance || cpy.dbPath !== targetPath) {
-    if (dbInstance) {
-      dbInstance.close();
-    }
-    dbInstance = new Database(targetPath === ':memory:' ? ':memory:' : path.resolve(process.cwd(), targetPath));
-    dbInstance.pragma('foreign_keys = ON');
     if (targetPath !== ':memory:') {
-      dbInstance.pragma('journal_mode = WAL');
-      dbInstance.pragma('synchronous = NORMAL');
+        const resolvedPath = path.resolve(process.cwd(), targetPath)
+        const dir = path.dirname(resolvedPath)
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+        }
     }
-    dbInstance.exec(SCHEMA_DDL);
-  }
 
-  const integrityRow = dbInstance.pragma('integrity_check') as Array<{ integrity_check: string }>;
-  const integrity = integrityRow[0]?.integrity_check || 'ok';
+    if (!dbInstance || cpy.dbPath !== targetPath) {
+        if (dbInstance) {
+            dbInstance.close()
+        }
+        dbInstance = new Database(
+            targetPath === ':memory:'
+                ? ':memory:'
+                : path.resolve(process.cwd(), targetPath),
+        )
+        dbInstance.pragma('foreign_keys = ON')
+        if (targetPath !== ':memory:') {
+            dbInstance.pragma('journal_mode = WAL')
+            dbInstance.pragma('synchronous = NORMAL')
+        }
+        dbInstance.exec(SCHEMA_DDL)
+    }
 
-  const tables = dbInstance
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-    .all() as Array<{ name: string }>;
+    const integrityRow = dbInstance.pragma('integrity_check') as Array<{
+        integrity_check: string
+    }>
+    const integrity = integrityRow[0]?.integrity_check || 'ok'
 
-  cpy.dbPath = targetPath;
-  cpy.isOpen = true;
-  cpy.tableCount = tables.length;
-  cpy.integrity = integrity;
+    const tables = dbInstance
+        .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .all() as Array<{ name: string }>
 
-  process.stdout.write(`>> [SQLITE] [OK] Local SQLite ledger opened: ${targetPath} (${tables.length} tables, integrity: ${integrity})\n`);
+    cpy.dbPath = targetPath
+    cpy.isOpen = true
+    cpy.tableCount = tables.length
+    cpy.integrity = integrity
 
-  if (bal.slv) {
-    bal.slv({
-      sqliteBit: {
-        idx: 'open-sqlite-ledger',
-        val: 1,
-        src: targetPath,
-        dat: dbInstance
-      }
-    });
-  }
-  return cpy;
-};
+    process.stdout.write(
+        `>> [SQLITE] [OK] Local SQLite ledger opened: ${targetPath} (${tables.length} tables, integrity: ${integrity})\n`,
+    )
 
-export const closeSqliteLedger = (cpy: SqliteModel, bal: SqliteBit, _ste?: State) => {
-  if (dbInstance) {
-    dbInstance.close();
-    dbInstance = null;
-  }
-  cpy.isOpen = false;
-  process.stdout.write('>> [SQLITE] [OK] Local SQLite connection closed.\n');
+    if (bal.slv) {
+        bal.slv({
+            sqliteBit: {
+                idx: 'open-sqlite-ledger',
+                val: 1,
+                src: targetPath,
+                dat: dbInstance,
+            },
+        })
+    }
+    return cpy
+}
 
-  if (bal.slv) {
-    bal.slv({
-      sqliteBit: {
-        idx: 'close-sqlite-ledger',
-        val: 1
-      }
-    });
-  }
-  return cpy;
-};
+export const closeSqliteLedger = (
+    cpy: SqliteModel,
+    bal: SqliteBit,
+    _ste?: State,
+) => {
+    if (dbInstance) {
+        dbInstance.close()
+        dbInstance = null
+    }
+    cpy.isOpen = false
+    process.stdout.write('>> [SQLITE] [OK] Local SQLite connection closed.\n')
 
+    if (bal.slv) {
+        bal.slv({
+            sqliteBit: {
+                idx: 'close-sqlite-ledger',
+                val: 1,
+            },
+        })
+    }
+    return cpy
+}

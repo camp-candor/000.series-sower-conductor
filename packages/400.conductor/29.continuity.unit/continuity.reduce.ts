@@ -13,6 +13,8 @@ export const reducer = (
     switch (act.type) {
         case Act.INIT_CONTINUITY:
             return Buzz.initContinuity(cpy, act.bale, state)
+        case Act.UPDATE_CONTINUITY:
+            return Buzz.updateContinuity(cpy, act.bale, state)
         case Act.EVALUATE_CONTINUITY_GATE:
             return Buzz.evaluateContinuityGate(cpy, act.bale, state)
         default:

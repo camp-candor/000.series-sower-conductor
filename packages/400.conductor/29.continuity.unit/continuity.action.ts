@@ -7,6 +7,12 @@ export class InitContinuity implements Action {
     constructor(public bale: ContinuityBit) {}
 }
 
+export const UPDATE_CONTINUITY = '[Continuity action] Update Continuity'
+export class UpdateContinuity implements Action {
+    readonly type = UPDATE_CONTINUITY
+    constructor(public bale: ContinuityBit) {}
+}
+
 export const EVALUATE_CONTINUITY_GATE =
     '[Continuity action] Evaluate Continuity Gate'
 export class EvaluateContinuityGate implements Action {
@@ -14,4 +20,4 @@ export class EvaluateContinuityGate implements Action {
     constructor(public bale: ContinuityBit) {}
 }
 
-export type Actions = InitContinuity | EvaluateContinuityGate
+export type Actions = InitContinuity | UpdateContinuity | EvaluateContinuityGate

@@ -85,23 +85,33 @@ export const evaluateSceneContinuity = (
 export const initContinuity = (
     cpy: ContinuityModel,
     bal: ContinuityBit,
-    _ste: State,
+    _ste?: State,
 ) => {
     if (bal.slv) bal.slv({ continuityBit: { idx: 'init-continuity', val: 1 } })
+    return cpy
+}
+
+export const updateContinuity = (
+    cpy: ContinuityModel,
+    bal: ContinuityBit,
+    _ste?: State,
+) => {
+    if (bal.slv)
+        bal.slv({ continuityBit: { idx: 'update-continuity', val: 1 } })
     return cpy
 }
 
 export const evaluateContinuityGate = (
     cpy: ContinuityModel,
     bal: ContinuityBit,
-    _ste: State,
+    _ste?: State,
 ) => {
     const ast = bal.dat as SceneAST
 
     if (!ast || !ast.scene_id) {
         const errMsg = 'INVALID_AST_PAYLOAD: Missing SceneAST data'
         process.stderr.write(`>> [CONTINUITY] [FAIL] ${errMsg}\n`)
-        if (bal.slv)
+        if (bal.slv) {
             return bal.slv({
                 continuityBit: {
                     idx: 'evaluate-continuity-error',
@@ -109,6 +119,7 @@ export const evaluateContinuityGate = (
                     src: errMsg,
                 },
             })
+        }
         throw new Error(errMsg)
     }
 
@@ -123,7 +134,7 @@ export const evaluateContinuityGate = (
         if (bal.slv) {
             return bal.slv({
                 continuityBit: {
-                    idx: 'evaluate-continuity-error',
+                    idx: 'evaluate-continuity-gate',
                     val: 0,
                     src: result.reason,
                     dat: result,
@@ -136,7 +147,7 @@ export const evaluateContinuityGate = (
     if (bal.slv) {
         bal.slv({
             continuityBit: {
-                idx: 'evaluate-continuity',
+                idx: 'evaluate-continuity-gate',
                 val: 1,
                 src: ast.scene_id,
                 dat: result,
