@@ -1,18 +1,16 @@
-import { Action } from '../99.core/interface/action.interface'
-import CpusBit from './fce/cpus.bit'
+import { Action } from '../99.core/interface/action.interface.js';
+import CpusBit from './fce/cpus.bit.js';
 
-// Cpus actions
-
-export const INIT_CPUS = '[Cpus action] Init Cpus'
+export const INIT_CPUS = '[Cpus action] Init Cpus';
 export class InitCpus implements Action {
-    readonly type = INIT_CPUS
-    constructor(public bale: CpusBit) {}
+  readonly type = INIT_CPUS;
+  constructor(public bale: CpusBit) {}
 }
 
-export const UPDATE_CPUS = '[Cpus action] Update Cpus'
-export class UpdateCpus implements Action {
-    readonly type = UPDATE_CPUS
-    constructor(public bale: CpusBit) {}
+export const VERIFY_HARDWARE_PREFLIGHT = '[Cpus action] Verify Hardware Preflight';
+export class VerifyHardwarePreflight implements Action {
+  readonly type = VERIFY_HARDWARE_PREFLIGHT;
+  constructor(public bale: CpusBit) {}
 }
 
-export type Actions = InitCpus | UpdateCpus
+export type Actions = InitCpus | VerifyHardwarePreflight;
