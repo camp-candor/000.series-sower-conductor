@@ -23,6 +23,7 @@
     "exclude": ["node_modules", "dist"],
     "references": [
         { "path": "./packages/100.agent" },
-        { "path": "./apps/worker" }
+        { "path": "./apps/worker" },
+        { "path": "./packages/400.conductor" }
     ]
 }

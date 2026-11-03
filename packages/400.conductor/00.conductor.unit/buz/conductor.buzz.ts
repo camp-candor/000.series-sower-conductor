@@ -13,20 +13,22 @@ export const initConductor = (
     bal: ConductorBit,
     ste: State,
 ) => {
-    cpy.status = 'READY';
-    process.stdout.write('>> [CONDUCTOR] [OK] packages/400.conductor initialized cleanly.\n');
+    cpy.status = 'READY'
+    process.stdout.write(
+        '>> [CONDUCTOR] [OK] packages/400.conductor initialized cleanly.\n',
+    )
 
     if (bal.slv) {
         bal.slv({
             conductorBit: {
                 idx: 'init-conductor',
                 val: 1,
-                dat: { status: cpy.status }
-            }
-        });
+                dat: { status: cpy.status },
+            },
+        })
     }
-    return cpy;
-};
+    return cpy
+}
 
 export const updateConductor = (
     cpy: ConductorModel,

@@ -1,8 +1,12 @@
 {
     "extends": "../../apps/995.library/tsconfig-base.json",
     "compilerOptions": {
-        "outDir": "../dist/400.conductor",
+        "outDir": "./dist",
+        "rootDir": "./",
         "composite": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
         "skipLibCheck": true,
         "noImplicitAny": false,
         "strictNullChecks": false,
@@ -11,6 +15,6 @@
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true
     },
-    "include": ["**/*"],
-    "exclude": ["**/node_modules"]
+    "include": ["**/*.ts", "**/*.tsx"],
+    "exclude": ["node_modules", "dist"]
 }
