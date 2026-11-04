@@ -3,7 +3,7 @@
     "version": "0.1.5",
     "type": "module",
     "private": true,
-    "description": "Deterministic Edge DevOps Control Plane and Terminal Agent Template",
+    "description": "Deterministic Media Conductor, Temporal Clock Governor",
     "workspaces": [
         "packages/*",
         "apps/*"
