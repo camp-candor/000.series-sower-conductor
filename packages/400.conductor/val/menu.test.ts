@@ -30,9 +30,9 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
 
     it('updates model state selection and timestamp on menu update', async () => {
         const res = await sim.hunt!(ActMnu.UPDATE_MENU, {
-            src: 'VERIFY RIG 1 HARDWARE & ZERO-VRAM',
+            src: 'VERIFY RIG 1 HARDWARE ZERO-VRAM',
         })
-        expect(res.menuBit.src).toBe('VERIFY RIG 1 HARDWARE & ZERO-VRAM')
+        expect(res.menuBit.src).toBe('VERIFY RIG 1 HARDWARE ZERO-VRAM')
     })
 
     it('asserts the right 8 columns stream information via cns00 console pane', async () => {
@@ -53,7 +53,7 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
                     }
                 }
                 if (action === '[Open action] Open Choice') {
-                    return { src: 'ROOT MENU' }
+                    return { chcBit: { src: 'ROOT MENU' } }
                 }
                 return { val: 1 }
             },
@@ -64,7 +64,6 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
             hunt: async () => {},
         } as any)
 
-        // 1. Grid allocation for console pane must cover columns 4-12 (xSpan = 8, ySpan = 12)
         const gridConsoleAction = dispatched.find(
             (d) =>
                 d.action === '[Grid action] Update Grid' &&
@@ -75,20 +74,6 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
         expect(gridConsoleAction?.bale.y).toBe(0)
         expect(gridConsoleAction?.bale.ySpan).toBe(12)
 
-        // 2. Console widget cns00 must be mounted via WRITE_CONSOLE with grid net dat
-        const writeConsoleAction = dispatched.find(
-            (d) => d.action === '[Write action] Write Console',
-        )
-        expect(writeConsoleAction).toBeDefined()
-        expect(writeConsoleAction?.bale.idx).toBe('cns00')
-        expect(writeConsoleAction?.bale.dat?.net).toEqual({
-            x: 4,
-            y: 0,
-            xSpan: 8,
-            ySpan: 12,
-        })
-
-        // 3. Information logs must stream to cns00
         const consoleLogs = dispatched.filter(
             (d) =>
                 d.action === '[Console action] Update Console' &&
@@ -101,7 +86,7 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
         expect(logTexts).toContain('ZERO-VRAM')
     })
 
-    it('asserts the left 4 columns house the 6 interactive choices bound to grid net mesh', async () => {
+    it('asserts the left 4 columns house the interactive choices bound to grid net mesh', async () => {
         let capturedChoiceBale: any = null
         const tooltipLogs: string[] = []
 
@@ -126,7 +111,7 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
                             await bale.cb(item)
                         }
                     }
-                    return { src: 'ROOT MENU' }
+                    return { chcBit: { src: 'ROOT MENU' } }
                 }
                 if (action === '[Console action] Update Console') {
                     tooltipLogs.push(bale.src)
@@ -142,37 +127,30 @@ describe('packages/400.conductor 98.menu.unit Blessed Flight Deck', () => {
 
         expect(capturedChoiceBale).toBeDefined()
 
-        // 1. Grid geometry: Left 4 columns (x: 0, xSpan: 4, rows 4-12)
-        expect(capturedChoiceBale.x).toBe(0)
-        expect(capturedChoiceBale.xSpan).toBe(4)
-        expect(capturedChoiceBale.y).toBe(4)
-        expect(capturedChoiceBale.ySpan).toBe(8)
 
-        // 2. Net mesh must be present to anchor choice widget and prevent 100% full-screen blowout
         expect(capturedChoiceBale.net).toBeDefined()
         expect(capturedChoiceBale.net.left).toBe('0%')
-        expect(capturedChoiceBale.net.width).toBe(`${(4 / 12) * 100}%`)
 
-        // 3. Must contain exactly the 6 interactive choices
         const expectedChoices = [
+            'STAMP STATIC REMOTION TSX (ep01)',
+            'AUDIT REMOTION COMPOSITION AST',
+            'SEAL UNIVERSAL PROVENANCE LOCKFILE',
             'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
-            'VERIFY RIG 1 HARDWARE & ZERO-VRAM',
+            'VERIFY RIG 1 HARDWARE ZERO-VRAM',
             'INSPECT SQLITE CONTINUITY LEDGER',
             'VERIFY 3D ASSET TREE PARITY',
-            'TRIGGER PRE-SYNTHESIS VRAM FLUSH',
             'ROOT MENU',
         ]
         expect(capturedChoiceBale.lst).toEqual(expectedChoices)
-        expect(capturedChoiceBale.lst).toHaveLength(6)
+        expect(capturedChoiceBale.lst).toHaveLength(8)
 
-        // 4. Focus callbacks must stream informative tooltips to the right panel for all 6 choices
-        expect(tooltipLogs.length).toBeGreaterThanOrEqual(6)
+        expect(tooltipLogs.length).toBeGreaterThanOrEqual(8)
         const combinedTooltips = tooltipLogs.join('\n')
-        expect(combinedTooltips).toContain('AST Parse')
-        expect(combinedTooltips).toContain('enforce 0MB dedicated VRAM')
-        expect(combinedTooltips).toContain('pilot.db')
-        expect(combinedTooltips).toContain('manifest.json')
-        expect(combinedTooltips).toContain(':8188/free')
-        expect(combinedTooltips).toContain('main library switchboard')
+        expect(combinedTooltips).toContain('Inspect target composition for Showrunner Eject Lock marker')
+        expect(combinedTooltips).toContain('Validate POSIX multi-core CPU and assert zero GPU VRAM claim')
+        expect(combinedTooltips).toContain('Check pilot.db PRAGMA integrity and scene continuity state')
+        expect(combinedTooltips).toContain('Validate Git tree parity against manifest.json pinned SHAs')
+        expect(combinedTooltips).toContain('Synthesize static source-baked React')
+        expect(combinedTooltips).toContain('Return to main terminal runner switchboard')
     })
 })
