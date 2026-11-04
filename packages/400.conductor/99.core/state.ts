@@ -23,7 +23,7 @@ export default class State extends Rx.BehaviorSubject<any> {
     }
 
     reducedApp(nextState: any, key: any) {
-        for (var k in Effect.reducer) Effect.reducer[k](nextState[k], key, this)
+        for (var k in Effect.reducer) nextState[k] = Effect.reducer[k](nextState[k], key, this)
         return nextState
     }
 
