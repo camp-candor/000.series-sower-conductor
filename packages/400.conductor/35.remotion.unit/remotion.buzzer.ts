@@ -1,2 +1,7 @@
-export { initRemotion } from './buz/remotion.buzz'
-export { updateRemotion } from './buz/remotion.buzz'
+export {
+  initRemotion,
+  checkEjectLock,
+  stampStaticComposition,
+  mutateMeuAst,
+  emitProvenanceLockfile,
+} from './buz/remotion.buzz.js';
