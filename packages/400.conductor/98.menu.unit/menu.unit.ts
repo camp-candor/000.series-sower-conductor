@@ -1,5 +1,6 @@
-import State from '../99.core/state.js'
+import State from '../99.core/state.js';
 
 export default class MenuUnit {
-    constructor(public state: State) {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  constructor(public state: State) {}
 }
