@@ -1,3 +1,4 @@
+
 import ConductorUnit from './00.conductor.unit/conductor.unit.js';
 import LogisticUnit from './04.logistic.unit/logistic.unit.js';
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js';
@@ -13,6 +14,7 @@ import CanonUnit from './30.canon.unit/canon.unit.js';
 import AudioUnit from './32.audio.unit/audio.unit.js';
 import AssetUnit from './33.asset.unit/asset.unit.js';
 import AbstractSyntaxTreeUnit from './34.abstractsyntaxtree.unit/abstractsyntaxtree.unit.js';
+import RemotionUnit from './35.remotion.unit/remotion.unit.js';
 import MenuUnit from './98.menu.unit/menu.unit.js';
 import { Model } from './99.core/interface/model.interface.js';
 
@@ -32,6 +34,7 @@ export const list: Array<any> = [
   AudioUnit,
   AssetUnit,
   AbstractSyntaxTreeUnit,
+  RemotionUnit,
   MenuUnit,
 ];
 
@@ -50,7 +53,9 @@ import * as reduceFromCanon from './30.canon.unit/canon.reduce.js';
 import * as reduceFromAudio from './32.audio.unit/audio.reduce.js';
 import * as reduceFromAsset from './33.asset.unit/asset.reduce.js';
 import * as reduceFromAST from './34.abstractsyntaxtree.unit/abstractsyntaxtree.reduce.js';
+import * as reduceFromRemotion from './35.remotion.unit/remotion.reduce.js';
 import * as reduceFromMenu from './98.menu.unit/menu.reduce.js';
+import { RemotionModel } from './35.remotion.unit/remotion.model.js';
 
 export const reducer: any = {
   conductor: reduceFromConductor.reducer,
@@ -68,6 +73,7 @@ export const reducer: any = {
   audio: reduceFromAudio.reducer,
   asset: reduceFromAsset.reducer,
   ast: reduceFromAST.reducer,
+  remotion: reduceFromRemotion.reducer,
   menu: reduceFromMenu.reducer,
 };
 
@@ -89,5 +95,6 @@ export default class UnitData implements Model {
   audio: any;
   asset: any;
   ast: any;
+  remotion: any = new RemotionModel();
   menu: any;
 }
