@@ -16,6 +16,7 @@ import {
   generateDespillSvgFilter,
   generateShotComponentCode,
 } from './opticalStack.buzz.js';
+import { buildCameraKinematicsSpec } from './kinematics.buzz.js';
 
 export function inspectEjectLockHeader(filePath: string): EjectMarkerStatus {
   if (!fs.existsSync(filePath)) {
@@ -40,9 +41,24 @@ export function inspectEjectLockHeader(filePath: string): EjectMarkerStatus {
 export function synthesizeStaticCompositionTsx(
   sceneId: string,
   totalFrames: number,
-  shots: ShotBakingInput[]
+  shots: ShotBakingInput[],
+  kinematicsModes?: Record<string, 'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE'>
 ): string {
-  const shotComponents = shots.map((s, idx) => generateShotComponentCode(s, idx)).join('\n\n');
+  const shotComponents = shots
+    .map((s, idx) => {
+      const mode = kinematicsModes?.[s.shotId] || (idx === 1 ? 'CRASH_ZOOM' : 'SLOW_PUSH_IN');
+      const cameraSpec = buildCameraKinematicsSpec({
+        sceneId,
+        shotId: s.shotId,
+        mode,
+        stageX: 960,
+        stageY: 850,
+        localAnchorX: 512,
+        localAnchorY: 800,
+      });
+      return generateShotComponentCode(s, idx, cameraSpec);
+    })
+    .join('\n\n');
 
   const sequences = shots
     .map((s, idx) => {
@@ -59,7 +75,7 @@ export function synthesizeStaticCompositionTsx(
 // Static Source-Baked Master Composition
 // Zero dynamic runtime evaluation. Pure literal coordinates.
 import React from 'react';
-import { Composition, Sequence, OffthreadVideo, Img, staticFile, useCurrentFrame, interpolate } from 'remotion';
+import { Composition, Sequence, OffthreadVideo, Img, staticFile, useCurrentFrame, interpolate, spring } from 'remotion';
 
 ${generateDespillSvgFilter()}
 
@@ -134,6 +150,7 @@ export const stampStaticComposition = (cpy: RemotionModel, bal: RemotionBit, _st
   const sceneId = bal.src || bal.dat?.sceneId || 'ep01_sc01';
   const outputTsxPath = bal.dat?.outputTsxPath || path.resolve(process.cwd(), `drafts/Master_${sceneId}.tsx`);
   const rawShots = bal.dat?.shots || [];
+  const kinematicsModes = bal.dat?.kinematicsModes;
 
   if (rawShots.length === 0) {
     const err = `STAMP_REJECTED: Zero shots provided for scene ${sceneId}`;
@@ -154,7 +171,7 @@ export const stampStaticComposition = (cpy: RemotionModel, bal: RemotionBit, _st
     const timedShots = computeCumulativeShotTimings(rawShots);
     const totalFrames = timedShots.reduce((acc, s) => acc + s.deliveryFrames, 0);
 
-    const tsxCode = synthesizeStaticCompositionTsx(sceneId, totalFrames, timedShots);
+    const tsxCode = synthesizeStaticCompositionTsx(sceneId, totalFrames, timedShots, kinematicsModes);
 
     const targetDir = path.dirname(outputTsxPath);
     if (!fs.existsSync(targetDir)) {
