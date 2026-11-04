@@ -1,4 +1,5 @@
 import { ShotBakingInput, formatUnquotedLiteral } from './literalBaking.buzz.js';
+import { CameraKinematicsSpec } from '../fce/remotion.interface.js';
 
 export function generateDespillSvgFilter(): string {
   return `
@@ -62,22 +63,62 @@ export function generateVectorTypographyComponent(dialogueText: string, characte
   `.trim();
 }
 
-export function generateShotComponentCode(shot: ShotBakingInput, index: number): string {
+export function generateShotComponentCode(
+  shot: ShotBakingInput,
+  index: number,
+  cameraSpec?: CameraKinematicsSpec
+): string {
   const compName = `Shot${(index + 1).toString().padStart(2, '0')}CameraWrapper`;
   const dur = formatUnquotedLiteral(shot.deliveryFrames);
-  const from = formatUnquotedLiteral(shot.fromFrame);
   const trim = formatUnquotedLiteral(shot.trimEndFrames);
-  const origX = formatUnquotedLiteral(shot.transformOriginX);
-  const origY = formatUnquotedLiteral(shot.transformOriginY);
-  const initScale = formatUnquotedLiteral(shot.initialScale);
-  const targetScale = formatUnquotedLiteral(shot.targetScale);
 
-  return `
-// Sequence-Relative Scoped Camera Rig for Shot ${shot.shotId}
-const ${compName}: React.FC = () => {
+  const origX = formatUnquotedLiteral(cameraSpec?.originXPercent ?? shot.transformOriginX);
+  const origY = formatUnquotedLiteral(cameraSpec?.originYPercent ?? shot.transformOriginY);
+  const startScale = formatUnquotedLiteral(cameraSpec?.startScale ?? shot.initialScale);
+  const targetScale = formatUnquotedLiteral(cameraSpec?.targetScale ?? shot.targetScale);
+
+  const mode = cameraSpec?.mode || 'SLOW_PUSH_IN';
+
+  let cameraHookLogic = '';
+
+  if (mode === 'CRASH_ZOOM') {
+    cameraHookLogic = `
+  const frame = useCurrentFrame();
+  const cameraScale = spring({
+    frame,
+    fps: 24,
+    config: { mass: 0.5, damping: 12, stiffness: 180, overshootClamping: true },
+    from: ${startScale},
+    to: ${targetScale}
+  });
+  const shakeX = 0;
+  const shakeY = 0;
+    `.trim();
+  } else if (mode === 'IMPACT_SHAKE' && cameraSpec?.jitterKeyframes) {
+    const tableJson = JSON.stringify(cameraSpec.jitterKeyframes);
+    cameraHookLogic = `
+  const frame = useCurrentFrame();
+  const jitterTable: Array<{ frame: number; deltaX: number; deltaY: number }> = ${tableJson};
+  const activeKeyframe = jitterTable.find((k) => k.frame === frame) || { deltaX: 0, deltaY: 0 };
+  const cameraScale = ${startScale};
+  const shakeX = activeKeyframe.deltaX;
+  const shakeY = activeKeyframe.deltaY;
+    `.trim();
+  } else {
+    // Default SLOW_PUSH_IN or STATIC
+    cameraHookLogic = `
   const frame = useCurrentFrame();
   const progress = interpolate(frame, [0, ${dur}], [0, 1], { extrapolateRight: 'clamp' });
-  const cameraScale = interpolate(progress, [0, 1], [${initScale}, ${targetScale}]);
+  const cameraScale = interpolate(progress, [0, 1], [${startScale}, ${targetScale}]);
+  const shakeX = 0;
+  const shakeY = 0;
+    `.trim();
+  }
+
+  return `
+// Sequence-Relative Scoped Camera Rig for Shot ${shot.shotId} (${mode})
+const ${compName}: React.FC = () => {
+  ${cameraHookLogic}
 
   return (
     <div style={{
@@ -86,7 +127,7 @@ const ${compName}: React.FC = () => {
       height: 1080,
       overflow: 'hidden',
       transformOrigin: \`\${${origX}}% \${${origY}}%\`,
-      transform: \`scale(\${cameraScale})\`
+      transform: \`scale(\${cameraScale}) translate(\${shakeX}px, \${shakeY}px)\`
     }}>
       {/* Layer 1: Static Environment Matte */}
       <Img

@@ -6,9 +6,34 @@ export type LayerType =
   | 'CHARACTER_PLATE'
   | 'OPTICAL_LENS';
 
+export type CameraMotionMode = 'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE';
+
+export interface SpringPhysicsConfig {
+  mass: number;
+  damping: number;
+  stiffness: number;
+  overshootClamping: boolean;
+}
+
+export interface JitterOffsetKeyframe {
+  frame: number;
+  deltaX: number;
+  deltaY: number;
+}
+
+export interface CameraKinematicsSpec {
+  mode: CameraMotionMode;
+  originXPercent: number; // 0 to 100%
+  originYPercent: number; // 0 to 100%
+  startScale: number;
+  targetScale: number;
+  springConfig?: SpringPhysicsConfig;
+  jitterKeyframes?: JitterOffsetKeyframe[];
+}
+
 export interface OpticalMasteringConfig {
-  halationIntensityBps: number; // 0 to 10000 bps
-  filmGrainOpacityBps: number;   // 0 to 10000 bps
+  halationIntensityBps: number;
+  filmGrainOpacityBps: number;
   colorLookupTable: string;
   enableDespill: boolean;
 }
@@ -26,8 +51,9 @@ export interface SequenceLayerSpec {
   durationInFrames: number;
   trimEndFrames: number;
   zIndex: number;
-  transformOriginX: number; // Percentage 0 to 100
-  transformOriginY: number; // Percentage 0 to 100
+  transformOriginX: number;
+  transformOriginY: number;
+  cameraSpec?: CameraKinematicsSpec;
 }
 
 export interface CompositionMetadata {
