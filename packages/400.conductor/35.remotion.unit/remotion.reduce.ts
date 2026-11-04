@@ -9,18 +9,17 @@ export function reducer(
   act: Act.Actions,
   state?: State,
 ) {
-  const cpy = clone(model);
   switch (act.type) {
     case Act.INIT_REMOTION:
-      return Buzz.initRemotion(cpy, act.bale, state!);
+      return Buzz.initRemotion(clone(model), act.bale, state!);
     case Act.CHECK_EJECT_LOCK:
-      return Buzz.checkEjectLock(cpy, act.bale, state!);
+      return Buzz.checkEjectLock(clone(model), act.bale, state!);
     case Act.STAMP_STATIC_COMPOSITION:
-      return Buzz.stampStaticComposition(cpy, act.bale, state!);
+      return Buzz.stampStaticComposition(clone(model), act.bale, state!);
     case Act.MUTATE_MEU_AST:
-      return Buzz.mutateMeuAst(cpy, act.bale, state!);
+      return Buzz.mutateMeuAst(clone(model), act.bale, state!);
     case Act.EMIT_PROVENANCE_LOCKFILE:
-      return Buzz.emitProvenanceLockfile(cpy, act.bale, state!);
+      return Buzz.emitProvenanceLockfile(clone(model), act.bale, state!);
     default:
       return model;
   }

@@ -6,6 +6,7 @@ import State from '../../99.core/state.js';
 import {
   CompositionMetadata,
   EjectMarkerStatus,
+  MeuRemediationTicket,
 } from '../fce/remotion.interface.js';
 import {
   computeCumulativeShotTimings,
@@ -21,26 +22,13 @@ import {
   generateMultiTrackAudioJsx,
   MultiTrackAudioPlan,
 } from './acousticDucking.buzz.js';
+import {
+  inspectEjectLockHeader,
+  executeSurgicalMeuAstMutation,
+} from './meuRepair.buzz.js';
+import { generateUniversalProvenanceLockfile } from './provenance.buzz.js';
 
-export function inspectEjectLockHeader(filePath: string): EjectMarkerStatus {
-  if (!fs.existsSync(filePath)) {
-    return { isLocked: false, filePath };
-  }
-
-  const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split('\n').slice(0, 10);
-  const lockLine = lines.find((l) => l.includes('@showrunner-lock: locked'));
-
-  if (lockLine) {
-    return {
-      isLocked: true,
-      filePath,
-      lockAuthor: 'SHOWRUNNER_OVERRIDE',
-    };
-  }
-
-  return { isLocked: false, filePath };
-}
+export { inspectEjectLockHeader };
 
 export function synthesizeStaticCompositionTsx(
   sceneId: string,
@@ -173,21 +161,21 @@ export const checkEjectLock = (cpy: RemotionModel, bal: RemotionBit, _ste: State
 export const stampStaticComposition = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
   const cns = '>> [METAPROGRAM]';
   const sceneId = bal.src || bal.dat?.sceneId || 'ep01_sc01';
-  const outputTsxPath = bal.dat?.outputTsxPath || path.resolve(process.cwd(), `drafts/Master_${sceneId}.tsx`);
+  const outputTsxPath = bal.dat?.outputTsxPath || path.resolve(process.cwd(), process.cwd().endsWith('400.conductor') ? '' : 'packages/400.conductor', `drafts/Master_${sceneId}.tsx`);
   const rawShots = bal.dat?.shots || [];
   const kinematicsModes = bal.dat?.kinematicsModes;
   const audioPlan = bal.dat?.audioPlan;
 
-  if (rawShots.length === 0) {
-    const err = `STAMP_REJECTED: Zero shots provided for scene ${sceneId}`;
+  const ejectStatus = inspectEjectLockHeader(outputTsxPath);
+  if (ejectStatus.isLocked) {
+    const err = `EJECT_BUTTON_LOCKED: Cannot overwrite manually locked composition ${outputTsxPath}`;
     process.stderr.write(`${cns} [FAIL] ${err}\n`);
     if (bal.slv) return bal.slv({ remotionBit: { idx: 'stamp-static-composition-error', val: 0, src: err } });
     throw new Error(err);
   }
 
-  const ejectStatus = inspectEjectLockHeader(outputTsxPath);
-  if (ejectStatus.isLocked) {
-    const err = `EJECT_BUTTON_LOCKED: Cannot overwrite manually locked composition ${outputTsxPath}`;
+  if (rawShots.length === 0) {
+    const err = `STAMP_REJECTED: Zero shots provided for scene ${sceneId}`;
     process.stderr.write(`${cns} [FAIL] ${err}\n`);
     if (bal.slv) return bal.slv({ remotionBit: { idx: 'stamp-static-composition-error', val: 0, src: err } });
     throw new Error(err);
@@ -243,58 +231,88 @@ export const stampStaticComposition = (cpy: RemotionModel, bal: RemotionBit, _st
 };
 
 export const mutateMeuAst = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [REMOTION]';
-  const targetPath = bal.src || bal.dat?.filePath;
+  const cns = '>> [MEU-SURGERY]';
+  const ticket = bal.dat as MeuRemediationTicket;
 
-  if (!targetPath) {
-    const err = 'MUTATE_REJECTED: Missing target filePath';
+  if (!ticket || !ticket.targetFile || !ticket.componentName || !ticket.propName) {
+    const err = 'MUTATE_REJECTED: Missing MeuRemediationTicket fields';
     process.stderr.write(`${cns} [FAIL] ${err}\n`);
     if (bal.slv) return bal.slv({ remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err } });
     throw new Error(err);
   }
 
-  const ejectStatus = inspectEjectLockHeader(targetPath);
-  if (ejectStatus.isLocked) {
-    const err = `EJECT_BUTTON_LOCKED: Cannot mutate locked AST at ${targetPath}`;
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  process.stdout.write(`${cns} [OK] MEU AST mutation verified for ${path.basename(targetPath)}.\n`);
-
-  if (bal.slv) {
-    bal.slv({
-      remotionBit: {
-        idx: 'mutate-meu-ast',
-        val: 1,
-        src: targetPath,
-        dat: { mutated: true },
-      },
-    });
+  try {
+    const result = executeSurgicalMeuAstMutation(ticket);
+    if (bal.slv) {
+      bal.slv({
+        remotionBit: {
+          idx: 'mutate-meu-ast',
+          val: 1,
+          src: result.mutatedPath,
+          dat: result,
+        },
+      });
+    }
+  } catch (err: any) {
+    process.stderr.write(`${cns} [FAIL] ${err.message}\n`);
+    if (bal.slv) {
+      bal.slv({ remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err.message } });
+    } else {
+      throw err;
+    }
   }
 
   return cpy;
 };
 
 export const emitProvenanceLockfile = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [REMOTION]';
-  const episodeId = bal.src || bal.dat?.episodeId || 'ep00';
-  const lockfilePath = path.resolve(process.cwd(), `vault/snapshots/build_${episodeId}.lock.json`);
+  const cns = '>> [PROVENANCE]';
+  const episodeId = bal.src || bal.dat?.episodeId || 'ep01';
+  const sceneId = bal.dat?.sceneId || 'sc01';
+  const metadata = bal.dat?.metadata || cpy.lastMetadata || {
+    episodeId,
+    sceneId,
+    fps: 24,
+    width: 1920,
+    height: 1080,
+    totalDurationFrames: 100,
+    outputTsxPath: cpy.lastStampedPath,
+    layers: [],
+    duckingTimeline: [],
+    opticalConfig: {
+      halationIntensityBps: 1500,
+      filmGrainOpacityBps: 2000,
+      colorLookupTable: 'lut.cube',
+      enableDespill: true,
+    },
+  };
 
-  process.stdout.write(`${cns} [OK] Emitted provenance lockfile target for ${episodeId}.\n`);
-
-  if (bal.slv) {
-    bal.slv({
-      remotionBit: {
-        idx: 'emit-provenance-lockfile',
-        val: 1,
-        src: lockfilePath,
-        dat: { episodeId, lockfilePath },
-      },
+  try {
+    const result = generateUniversalProvenanceLockfile({
+      episodeId,
+      sceneId,
+      metadata,
+      canonMerkleRoot: bal.dat?.canonMerkleRoot,
     });
+
+    if (bal.slv) {
+      bal.slv({
+        remotionBit: {
+          idx: 'emit-provenance-lockfile',
+          val: 1,
+          src: result.lockfilePath,
+          dat: result,
+        },
+      });
+    }
+  } catch (err: any) {
+    process.stderr.write(`${cns} [FAIL] ${err.message}\n`);
+    if (bal.slv) {
+      bal.slv({ remotionBit: { idx: 'emit-provenance-lockfile-error', val: 0, src: err.message } });
+    } else {
+      throw err;
+    }
   }
 
   return cpy;
 };
-

@@ -73,6 +73,7 @@ describe('packages/400.conductor 35.remotion.unit Candor Foundation', () => {
   it('fails closed when attempting to stamp over an eject-locked composition', async () => {
     const res = await sim.hunt!(ActRemotion.STAMP_STATIC_COMPOSITION, {
       dat: {
+        outputTsxPath: lockedFile,
         metadata: {
           episodeId: 'ep01',
           sceneId: 'sc01',
@@ -80,7 +81,7 @@ describe('packages/400.conductor 35.remotion.unit Candor Foundation', () => {
           width: 1920,
           height: 1080,
           totalDurationFrames: 75,
-          outputTsxPath: lockedFile,
+
           layers: [],
           duckingTimeline: [],
           opticalConfig: {

@@ -23,8 +23,8 @@ export interface JitterOffsetKeyframe {
 
 export interface CameraKinematicsSpec {
   mode: CameraMotionMode;
-  originXPercent: number; // 0 to 100%
-  originYPercent: number; // 0 to 100%
+  originXPercent: number;
+  originYPercent: number;
   startScale: number;
   targetScale: number;
   springConfig?: SpringPhysicsConfig;
@@ -76,6 +76,41 @@ export interface EjectMarkerStatus {
   lockAuthor?: string;
 }
 
+export interface MeuRemediationTicket {
+  ticketId: string;
+  targetFile: string;
+  componentName: string;
+  propName: string;
+  newValue: string | number;
+  cycleCount: number; // 1, 2, or 3
+  reason: string;
+}
+
+export interface StoryArchitectDossier {
+  dossierId: string;
+  ticketId: string;
+  targetFile: string;
+  componentName: string;
+  failedAttempts: number;
+  escalatedAtMs: number;
+  reason: string;
+  status: 'TIER_3_QUARANTINED';
+}
+
+export interface UniversalProvenanceManifest {
+  manifestVersion: '1.0.0';
+  episodeId: string;
+  sceneId: string;
+  sealedAtMs: number;
+  gitCommitSha: string;
+  canonMerkleRoot: string;
+  toolchain: {
+    nodeVersion: string;
+    remotionVersion: string;
+  };
+  assetDigests: Record<string, string>; // relativePath -> SHA-256
+}
+
 export default interface Remotion extends Model {
   idx: string;
   totalCompositionsStamped: number;
@@ -83,4 +118,5 @@ export default interface Remotion extends Model {
   isEjectLocked: boolean;
   compilerVersion: string;
   lastMetadata: CompositionMetadata | null;
+  activeDossiers: Record<string, StoryArchitectDossier>;
 }
