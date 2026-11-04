@@ -5,4 +5,5 @@ export class MenuModel implements Menu {
     activeSelection: string = 'NONE'
     lastActionTimestamp: number = 0
     statusMessage: string = 'IDLE'
+    lastRemotionReceipt: string | null = null
 }

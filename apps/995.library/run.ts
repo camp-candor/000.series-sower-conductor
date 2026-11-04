@@ -282,6 +282,35 @@ const init = async () => {
             src: ':: [KEYS] UP/DOWN or J/K: Navigate | ENTER: Select',
         })
 
+        // Conductor Flight Deck Autodiscovery Linkage
+        const args = process.argv.slice(2)
+        const isConductorTarget =
+            options.conductor ||
+            args.includes('--conductor') ||
+            args.includes('--package=400.conductor') ||
+            idx === 'conductor' ||
+            idx === '400.conductor'
+
+        if (isConductorTarget) {
+            try {
+                const sim = (await import('../../packages/400.conductor/hunt.js')).default
+                const ActMnu = await import('../../packages/400.conductor/98.menu.unit/menu.action.js')
+
+                await LIBRARY.hunt(CONSOLE_ACTION_LIBRARY.UPDATE_CONSOLE, {
+                    idx: 'cns00',
+                    src: '>> [RUNNER] Booting Conductor Flight Deck (packages/400.conductor)...',
+                })
+                await sim.hunt(ActMnu.INIT_MENU, {})
+                await sim.hunt(ActMnu.UPDATE_MENU, {})
+                return
+            } catch (err: any) {
+                await LIBRARY.hunt(CONSOLE_ACTION_LIBRARY.UPDATE_CONSOLE, {
+                    idx: 'cns00',
+                    src: `:: [RUNNER] [FAIL] Could not mount packages/400.conductor: ${err.message}`,
+                })
+            }
+        }
+
         // Direct target dispatch if specified via -t / --separator (excluding default 'library')
         if (idx && idx.toLowerCase() !== 'library') {
             const target = existingPackages.find(
