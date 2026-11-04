@@ -1,8 +1,10 @@
-import Remotion from './fce/remotion.interface'
-import RemotionBit from './fce/remotion.interface'
+import Remotion, { CompositionMetadata } from './fce/remotion.interface.js';
 
 export class RemotionModel implements Remotion {
-    //idx:string;
-    //remotionBitList: RemotionBit[] = [];
-    //remotionBits: any = {};
+  idx: string = '35.remotion.unit';
+  totalCompositionsStamped: number = 0;
+  lastStampedPath: string = '';
+  isEjectLocked: boolean = false;
+  compilerVersion: string = '1.0.0';
+  lastMetadata: CompositionMetadata | null = null;
 }
