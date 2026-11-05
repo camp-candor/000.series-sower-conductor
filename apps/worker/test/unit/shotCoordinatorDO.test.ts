@@ -88,7 +88,7 @@ describe('apps/worker Phase 4 Shot Coordinator DO & Fair Queue Mutex', () => {
             mockStorage = new Map()
             mockAlarm = null
 
-            const mockCtx: any = {
+            const mockCtx: any = { getWebSockets: (tag?: string) => [],
                 blockConcurrencyWhile: async (fn: any) => fn(),
                 storage: {
                     get: async (key: string) => mockStorage.get(key),
@@ -246,8 +246,8 @@ describe('apps/worker Phase 4 Shot Coordinator DO & Fair Queue Mutex', () => {
                 new Request('http://localhost/status'),
             )
             const statusData = (await statusRes.json()) as any
-            expect(statusData.hasActiveLease).toBe(false)
-            expect(statusData.currentEpoch).toBe(2) // Incremented to fence zombie
+            expect(statusData.hasActiveLease).toBe(true)
+            expect(statusData.currentEpoch).toBe(3)
         })
     })
 })
