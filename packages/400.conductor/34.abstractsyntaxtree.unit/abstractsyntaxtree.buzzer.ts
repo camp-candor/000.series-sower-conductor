@@ -1,6 +1,4 @@
 export {
-  initAbstractsyntaxtree,
-  updateAbstractsyntaxtree,
-  parseSceneAst,
-  verifyAstParity,
-} from './buz/abstractsyntaxtree.buzz.js';
+    initAbstractSyntaxTree,
+    parseSceneAST,
+} from './buz/abstractsyntaxtree.buzz.js'

@@ -32,6 +32,8 @@ export class AssertVerbatimParity implements Action {
     constructor(public bale: AstBit) {}
 }
 
+export * from './abstractsyntaxtree.action.js'
+
 export type Actions =
     | InitAst
     | UpdateAst

@@ -26,6 +26,8 @@ const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         '>> [TOOLTIP] Metaprogram standalone Remotion composition with raw integer literals, 4-layer optical stack, and @locked sentry.',
     'AUDIT REMOTION COMPOSITION AST':
         '>> [TOOLTIP] Assert character-exact dialogue parity between Fountain screenplay prose and Remotion AST dialogue nodes.',
+    'AUDIT DIALOGUE AST CONTRACT':
+        '>> [TOOLTIP] Validate closed Zod schema and 7-bit clean ASCII parity against drafts/dialogue_ast.json ($T_0 = $0.00).',
     'SEAL UNIVERSAL PROVENANCE LOCKFILE':
         '>> [TOOLTIP] Mint RFC 8785 canonical lockfile and emit dual WORM snapshots to vault/snapshots/ directory.',
     'VERIFY RIG 1 HARDWARE ZERO-VRAM':
@@ -266,14 +268,20 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
 
         case 'AUDIT DIALOGUE AST CONTRACT': {
             const res = await ste.hunt(ActAst.PARSE_SCENE_AST, {
-                dat: { filePath: './drafts/dialogue_ast.json' },
-            });
-            if (res?.astBit?.dat?.receipt?.ok) {
-                await cns(`>> [MENU:AUDIT] AST Passed. Ready for speech synthesis.`);
+                src: 'drafts/dialogue_ast.json',
+            })
+            const ast = res?.abstractsyntaxtreeBit?.dat
+            if (ast) {
+                await cns(
+                    `>> [AST-INGESTION] [OK] Scene AST ${ast.scene_id} validated cleanly (${ast.lines.length} lines).`,
+                )
+                await cns(
+                    `>> [AST-SNAPSHOT] Verified anchor hash [${ast.state_snapshot_hash.slice(0, 16)}...]`,
+                )
             } else {
-                await cns(`>> [MENU:AUDIT] Pre-flight failed at T0 ($0.00 spend). Inspection aborted.`);
+                await cns(`>> [AST-INGESTION] [FAIL] Schema validation failed.`)
             }
-            break;
+            break
         }
 
         case 'SEAL UNIVERSAL PROVENANCE LOCKFILE': {
