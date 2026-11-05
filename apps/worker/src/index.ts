@@ -17,7 +17,10 @@ export interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 // Wire Global Middleware Pipeline
-app.use('*', authGate);
+app.use('/lease/*', authGate);
+app.use('/assembly/*', authGate);
+app.use('/staleness/*', authGate);
+
 app.use('*', intentSanitizer);
 app.use('/staleness/*', stalenessGate);
 app.use('/lease/*', stalenessGate);
@@ -39,7 +42,28 @@ app.get('/health', (c) => {
   });
 });
 
-// 3. Relational Continuity Staleness Pre-Flight Query
+// 3. WebSocket Upgrade Handshake Gateway
+app.get('/ws', async (c) => {
+  const upgradeHeader = c.req.header('Upgrade');
+  if (upgradeHeader !== 'websocket') {
+    return c.text('HTTP 426 Upgrade Required: WebSocket protocol required', 426);
+  }
+  const id = c.env.SHOT_COORDINATOR.idFromName('global_shot_coordinator');
+  const stub = c.env.SHOT_COORDINATOR.get(id);
+  return stub.fetch(c.req.raw);
+});
+
+app.get('/ws/telemetry', async (c) => {
+  const upgradeHeader = c.req.header('Upgrade');
+  if (upgradeHeader !== 'websocket') {
+    return c.text('HTTP 426 Upgrade Required: WebSocket protocol required', 426);
+  }
+  const id = c.env.SHOT_COORDINATOR.idFromName('global_shot_coordinator');
+  const stub = c.env.SHOT_COORDINATOR.get(id);
+  return stub.fetch(c.req.raw);
+});
+
+// 4. Relational Continuity Staleness Pre-Flight Query
 app.get('/staleness/:scene_id', async (c) => {
   const sceneId = c.req.param('scene_id');
   return c.json({
@@ -52,14 +76,14 @@ app.get('/staleness/:scene_id', async (c) => {
   });
 });
 
-// 4. Delegate all /lease/* calls to the singleton ShotCoordinatorDO Actor
+// 5. Delegate all /lease/* calls to the singleton ShotCoordinatorDO Actor
 app.all('/lease/*', async (c) => {
   const id = c.env.SHOT_COORDINATOR.idFromName('global_shot_coordinator');
   const stub = c.env.SHOT_COORDINATOR.get(id);
   return stub.fetch(c.req.raw);
 });
 
-// 5. Assembly Receipt Provenance Settlement Intent
+// 6. Assembly Receipt Provenance Settlement Intent
 app.post('/assembly/receipt', async (c) => {
   const body = await c.req.json();
   const episodeId = body.episodeId || 'ep01';
