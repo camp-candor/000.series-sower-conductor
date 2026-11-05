@@ -103,6 +103,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'TRANSMIT ASSEMBLY RECEIPT TO EDGE',
         'STAMP STATIC REMOTION TSX (ep01)',
         'AUDIT REMOTION COMPOSITION AST',
+        'AUDIT DIALOGUE AST CONTRACT',
         'SEAL UNIVERSAL PROVENANCE LOCKFILE',
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
         'INSPECT SQLITE CONTINUITY LEDGER',
@@ -261,6 +262,18 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
                 '>> [PARITY] [OK] Character-exact verbatim parity satisfied (0 mismatches).',
             )
             break
+        }
+
+        case 'AUDIT DIALOGUE AST CONTRACT': {
+            const res = await ste.hunt(ActAst.PARSE_SCENE_AST, {
+                dat: { filePath: './drafts/dialogue_ast.json' },
+            });
+            if (res?.astBit?.dat?.receipt?.ok) {
+                await cns(`>> [MENU:AUDIT] AST Passed. Ready for speech synthesis.`);
+            } else {
+                await cns(`>> [MENU:AUDIT] Pre-flight failed at T0 ($0.00 spend). Inspection aborted.`);
+            }
+            break;
         }
 
         case 'SEAL UNIVERSAL PROVENANCE LOCKFILE': {
