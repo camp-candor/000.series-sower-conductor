@@ -88,7 +88,8 @@ describe('apps/worker Phase 4 Shot Coordinator DO & Fair Queue Mutex', () => {
             mockStorage = new Map()
             mockAlarm = null
 
-            const mockCtx: any = { getWebSockets: (tag?: string) => [],
+            const mockCtx: any = {
+                getWebSockets: (_tag?: string) => [],
                 blockConcurrencyWhile: async (fn: any) => fn(),
                 storage: {
                     get: async (key: string) => mockStorage.get(key),
