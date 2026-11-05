@@ -7,10 +7,16 @@ export class InitSomaticdsp implements Action {
   constructor(public bale: SomaticdspBit) {}
 }
 
-export const TRANSLATE_SOMATIC_DSP = '[Somaticdsp action] Translate Somatic Dsp';
+export const UPDATE_SOMATICDSP = '[Somaticdsp action] Update Somaticdsp';
+export class UpdateSomaticdsp implements Action {
+  readonly type = UPDATE_SOMATICDSP;
+  constructor(public bale: SomaticdspBit) {}
+}
+
+export const TRANSLATE_SOMATIC_DSP = '[Somaticdsp action] Translate Somatic DSP';
 export class TranslateSomaticDsp implements Action {
   readonly type = TRANSLATE_SOMATIC_DSP;
   constructor(public bale: SomaticdspBit) {}
 }
 
-export type Actions = InitSomaticdsp | TranslateSomaticDsp;
+export type Actions = InitSomaticdsp | UpdateSomaticdsp | TranslateSomaticDsp;

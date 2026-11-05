@@ -108,6 +108,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'AUDIT DIALOGUE AST CONTRACT',
         'SEAL UNIVERSAL PROVENANCE LOCKFILE',
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
+        'INSPECT CHARACTER SOMATIC DSP',
         'INSPECT SQLITE CONTINUITY LEDGER',
         'VERIFY 3D ASSET TREE PARITY',
         'ROOT MENU',
@@ -298,6 +299,33 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
             break
         }
 
+        case 'INSPECT CHARACTER SOMATIC DSP': {
+            const bit = await ste.hunt('[Somaticdsp action] Translate Somatic DSP', {
+                dat: {
+                    somaticState: {
+                        character_id: 'char_bog',
+                        fatigue_bps: 8200,
+                        pain_bps: 4500,
+                        refusal_strain_bps: 1200,
+                        is_conscious: true,
+                        active_conditions: [],
+                        banned_kinetic_verbs: [],
+                    },
+                    somaticInput: {
+                        character_id: 'char_bog',
+                        base_pitch_shift_semitones: -1.0,
+                        formant_warping_factor: 1.0,
+                    },
+                },
+            });
+            if (bit?.smtBit?.dat?.receipt?.ok) {
+                await global.LIBRARY.hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: '>> [MENU:SOMATIC] Inspection Complete. Modifiers calculated.',
+                });
+            }
+            break;
+        }
         case 'VERIFY RIG 1 HARDWARE ZERO-VRAM': {
             await cns(
                 '>> [HARDWARE] Verifying Rig 1 CPU-only Software-GL Swangle configuration...',
