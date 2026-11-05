@@ -33,7 +33,7 @@ export function reducer(
         case Act.EMIT_PROVENANCE_LOCKFILE:
             return Buzz.emitProvenanceLockfile(cpy, act.bale, state!)
         case Act.RENDER_SWANGLE:
-            return Buzz.renderSwangle(cpy, act.bale, state!)
+            return Buzz.renderSwangleBuzz(cpy, act.bale, state!)
         default:
             return model
     }
