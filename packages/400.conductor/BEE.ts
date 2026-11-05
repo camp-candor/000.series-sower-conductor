@@ -2,7 +2,10 @@ import ConductorUnit from './00.conductor.unit/conductor.unit.js'
 import LogisticUnit from './04.logistic.unit/logistic.unit.js'
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js'
 import SpeechUnit from './09.speech.unit/speech.unit.js'
-import SomaticdspUnit from './10.somaticdsp.unit/somaticdsp.unit.js'
+import SomaticdspUnit from './10.somaticdsp.unit/somaticdsp.unit.js';
+import Somaticdsp from './10.somaticdsp.unit/fce/somaticdsp.interface.js';
+import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js';
+import { reducer as somaticdspReducer } from './10.somaticdsp.unit/somaticdsp.reduce.js';
 import LedgerUnit from './21.ledger.unit/ledger.unit.js'
 import FrameUnit from './24.frame.unit/frame.unit.js'
 import VramUnit from './26.vram.unit/vram.unit.js'
@@ -93,7 +96,7 @@ export default class UnitData implements Model {
   logistic: any;
   sqlite: any;
   speech: any;
-  somaticdsp: any;
+  somaticdsp: Somaticdsp = new SomaticdspModel();
   ledger: any;
   frame: any;
   vram: any;

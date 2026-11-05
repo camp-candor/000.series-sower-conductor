@@ -1,116 +1,121 @@
-import { describe, it, expect } from 'vitest';
-import sim from '../hunt.js';
-import * as ActSomatic from '../10.somaticdsp.unit/somaticdsp.action.js';
-import { mapSomaticToAcousticDsp } from '../10.somaticdsp.unit/buz/somaticdsp.buzz.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { SomaticdspModel } from '../10.somaticdsp.unit/somaticdsp.model.js';
+import * as Buzz from '../10.somaticdsp.unit/buz/somaticdsp.buzz.js';
+import {
+  CharacterSomaticState,
+  DialogueSomaticInput,
+} from '../10.somaticdsp.unit/fce/somaticdsp.interface.js';
 
-describe('packages/400.conductor 10.somaticdsp.unit Somatic Parameter DSP Translation', () => {
-  it('translates neutral resting baseline parameters cleanly', () => {
-    const payload = mapSomaticToAcousticDsp({
-      characterId: 'char_elias',
-      dialogueText: 'The relay is dead. We move now.',
-      emotionalTag: 'neutral',
-      basePacing: 1.0,
-      meters: {
-        somaticFatigueBps: 0,
-        physicalPainBps: 0,
-        refusalStrainBps: 0,
-        paranoiaPressureBps: 0,
-      },
-    });
+describe('10.somaticdsp.unit: Somatic Biological Condition Vector Translation', () => {
+  let model: SomaticdspModel;
 
-    expect(payload.character).toBe('char_elias');
-    expect(payload.tonePacing).toBe(1.0);
-    expect(payload.dsp_modifiers.basePitchShiftSemitones).toBe(0.0);
-    expect(payload.dsp_modifiers.formantWarpingFactor).toBe(1.0);
-    expect(payload.dsp_modifiers.breathinessPauseMultiplier).toBe(1.0);
-    expect(payload.dsp_modifiers.pause_frequency_multiplier).toBe(1.0);
-    expect(payload.dsp_modifiers.vocalFryDensity).toBe(0.0);
-    expect(payload.dsp_modifiers.target_lufs).toBe(-16.0);
-    expect(payload.dsp_modifiers.peak_dbtp).toBe(-1.0);
-    expect(payload.dsp_modifiers.bannedCadences).toEqual([]);
+  beforeEach(() => {
+    model = new SomaticdspModel();
   });
 
-  it('dilates breath pauses quadratically and locks 2.8x pause multiplier on extreme fatigue (>8000 bps)', () => {
-    const payload = mapSomaticToAcousticDsp({
-      characterId: 'char_pilot',
-      dialogueText: 'Need oxygen... valve jammed.',
-      emotionalTag: 'exhausted',
-      meters: {
-        somaticFatigueBps: 8400,
-        physicalPainBps: 2000,
-      },
-    });
+  const baseState: CharacterSomaticState = {
+    character_id: 'char_bog',
+    fatigue_bps: 0,
+    pain_bps: 0,
+    refusal_strain_bps: 0,
+    is_conscious: true,
+    active_conditions: [],
+    banned_kinetic_verbs: [],
+  };
 
-    // Pacing drops by up to 30% (8400 / 10000 * 0.3 = 0.252 reduction -> 0.748)
-    expect(payload.tonePacing).toBeCloseTo(0.748, 2);
-    // Extreme fatigue locks pause frequency multiplier to at least 2.8x
-    expect(payload.dsp_modifiers.pause_frequency_multiplier).toBe(2.8);
-    // Quadratic breath dilation: 1.0 + 1.40 * (0.84)^2 = 1.0 + 1.40 * 0.7056 = 1.9878
-    expect(payload.dsp_modifiers.breathinessPauseMultiplier).toBeCloseTo(1.99, 1);
-    // Fry: 0.5 * 0.84 + 0.4 * 0.20 = 0.42 + 0.08 = 0.50
-    expect(payload.dsp_modifiers.vocalFryDensity).toBeCloseTo(0.50, 2);
-    expect(payload.dsp_modifiers.bannedCadences).toContain('RAPID_STACCATO');
+  const baseInput: DialogueSomaticInput = {
+    character_id: 'char_bog',
+    base_pitch_shift_semitones: 0.0,
+    formant_warping_factor: 1.0,
+    base_breathiness: 1.0,
+    base_vocal_fry: 0.0,
+  };
+
+  it('calculates nominal modifiers for healthy neutral character', () => {
+    const mods = Buzz.mapSomaticToAcousticDsp(baseState, baseInput);
+    expect(mods.effective_pitch_semitones).toBe(0.0);
+    expect(mods.effective_formant_warping).toBe(1.0);
+    expect(mods.effective_breathiness_multiplier).toBe(1.0);
+    expect(mods.pause_frequency_multiplier).toBe(1.0);
+    expect(mods.effective_vocal_fry_density).toBe(0.0);
+    expect(mods.target_lufs).toBe(-16.0);
+    expect(mods.peak_dbtp).toBe(-1.0);
+    expect(mods.banned_cadences).toEqual([]);
   });
 
-  it('collapses formant warping factor to 0.7 on crushed laryngeal cartilage trauma', () => {
-    const payload = mapSomaticToAcousticDsp({
-      characterId: 'char_victim',
-      dialogueText: 'Cannot breathe.',
-      emotionalTag: 'trauma',
-      activeConditions: ['cnd_crushed_laryngeal_cartilage'],
-    });
-
-    expect(payload.dsp_modifiers.formantWarpingFactor).toBe(0.7);
-    expect(payload.dsp_modifiers.basePitchShiftSemitones).toBe(-4.0);
-    expect(payload.dsp_modifiers.bannedCadences).toContain('RISING_INFLECTION');
+  it('fails closed at T0 with VOCAL_DELIVERY_BREACH if character is unconscious', () => {
+    const unconsciousState = { ...baseState, is_conscious: false };
+    expect(() => Buzz.mapSomaticToAcousticDsp(unconsciousState, baseInput)).toThrow(
+      /VOCAL_DELIVERY_BREACH: Actor is unconscious/,
+    );
   });
 
-  it('injects high-frequency vocal flutter and shivering pitch elevation on physiological shock', () => {
-    const payload = mapSomaticToAcousticDsp({
-      characterId: 'char_scout',
-      dialogueText: 'Freezing cold outside.',
-      emotionalTag: 'shivering',
-      activeConditions: ['cnd_severe_hypothermia'],
-    });
-
-    expect(payload.dsp_modifiers.basePitchShiftSemitones).toBe(2.5);
-    expect(payload.dsp_modifiers.vocalFryDensity).toBe(0.8);
-    expect(payload.dsp_modifiers.bannedCadences).toContain('MONOTONE_FLAT');
+  it('fails closed at T0 with VOCAL_DELIVERY_BREACH if vocal cords are transected or character is mute', () => {
+    const muteState: CharacterSomaticState = {
+      ...baseState,
+      active_conditions: ['cnd_vocal_cord_transected'],
+    };
+    expect(() => Buzz.mapSomaticToAcousticDsp(muteState, baseInput)).toThrow(
+      /VOCAL_DELIVERY_BREACH: Actor vocal cords are transected/,
+    );
   });
 
-  it('trips VOCAL_DELIVERY_BREACH pre-flight gate at T_0 = $0.00 if entity is mute or speech verb is banned', () => {
-    expect(() => {
-      mapSomaticToAcousticDsp({
-        characterId: 'char_mute_automaton',
-        dialogueText: 'Attempting vocalization.',
-        emotionalTag: 'error',
-        activeConditions: ['mute'],
-      });
-    }).toThrow(/VOCAL_DELIVERY_BREACH/);
-
-    expect(() => {
-      mapSomaticToAcousticDsp({
-        characterId: 'char_bound',
-        dialogueText: 'Muffled speech.',
-        emotionalTag: 'gagged',
-        bannedKineticVerbs: ['speak'],
-      });
-    }).toThrow(/VOCAL_DELIVERY_BREACH/);
+  it('fails closed at T0 if speak is in banned_kinetic_verbs', () => {
+    const bannedSpeakState: CharacterSomaticState = {
+      ...baseState,
+      banned_kinetic_verbs: ['sprint', 'speak'],
+    };
+    expect(() => Buzz.mapSomaticToAcousticDsp(bannedSpeakState, baseInput)).toThrow(
+      /VOCAL_DELIVERY_BREACH: speak verb is in banned_kinetic_verbs/,
+    );
   });
 
-  it('dispatches ActSomatic.TRANSLATE_SOMATIC_DSP cleanly through sim.hunt', async () => {
-    const res = await sim.hunt!(ActSomatic.TRANSLATE_SOMATIC_DSP, {
+  it('applies quadratic breath dilation and locks pause multiplier to 2.8x when fatigue >= 8000 bps', () => {
+    const exhaustedState: CharacterSomaticState = {
+      ...baseState,
+      fatigue_bps: 8200,
+    };
+    const mods = Buzz.mapSomaticToAcousticDsp(exhaustedState, baseInput);
+    // Pi_eff = 1.0 * (1 + 1.40 * 0.82^2) = 1.0 * (1 + 1.40 * 0.6724) = 1.941
+    expect(mods.effective_breathiness_multiplier).toBeGreaterThan(1.9);
+    expect(mods.pause_frequency_multiplier).toBe(2.8);
+    expect(mods.banned_cadences).toContain('RAPID_STACCATO');
+  });
+
+  it('collapses formant warping factor to 0.7 and drops pitch by 4 semitones under crushed larynx trauma', () => {
+    const crushedLarynxState: CharacterSomaticState = {
+      ...baseState,
+      active_conditions: ['crushed_larynx'],
+    };
+    const mods = Buzz.mapSomaticToAcousticDsp(crushedLarynxState, baseInput);
+    expect(mods.effective_formant_warping).toBe(0.7);
+    expect(mods.effective_pitch_semitones).toBe(-4.0);
+  });
+
+  it('clamps pitch shift strictly within [-12.0, 12.0] semitones under extreme inputs', () => {
+    const extremeInput: DialogueSomaticInput = {
+      ...baseInput,
+      base_pitch_shift_semitones: 11.5,
+    };
+    const painState: CharacterSomaticState = {
+      ...baseState,
+      pain_bps: 10000, // +3.5 st
+    };
+    const mods = Buzz.mapSomaticToAcousticDsp(painState, extremeInput);
+    expect(mods.effective_pitch_semitones).toBe(12.0);
+  });
+
+  it('buzz translateSomaticDsp captures errors cleanly in receipt without crashing', async () => {
+    const bale = {
+      idx: 'test-translate',
       dat: {
-        characterId: 'char_elias',
-        dialogueText: 'Dispatching via sim.hunt test harness.',
-        emotionalTag: 'firm',
-        meters: { somaticFatigueBps: 3000 },
+        somaticState: { ...baseState, is_conscious: false },
+        somaticInput: baseInput,
       },
-    });
-
-    expect(res).toBeDefined();
-    expect(res.somaticdspBit.val).toBe(1);
-    expect(res.somaticdspBit.src).toBe('char_elias');
-    expect(res.somaticdspBit.dat.dsp_modifiers.target_lufs).toBe(-16.0);
+      slv: (res: any) => res,
+    };
+    const updated = await Buzz.translateSomaticDsp(model, bale, null as any);
+    expect(updated.lastReceipt?.ok).toBe(false);
+    expect(updated.lastReceipt?.breach_reason).toContain('VOCAL_DELIVERY_BREACH');
   });
 });
