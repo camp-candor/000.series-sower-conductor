@@ -7,4 +7,5 @@ export default interface Menu extends Model {
   statusMessage: string;
   lastRemotionReceipt: string | null;
   lastEdgeReceipt: string | null;
+  lastLifecycleReceipt: string | null;
 }
