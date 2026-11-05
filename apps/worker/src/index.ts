@@ -3,6 +3,7 @@ import { authGate } from './middleware/authGate.js'
 import { stalenessGate } from './middleware/stalenessGate.js'
 import { intentSanitizer } from './middleware/intentSanitizer.js'
 import { ShotCoordinatorDO } from './objects/ShotCoordinatorDO.js'
+import { assemblyRoutes } from './routes/assemblyRoutes.js'
 
 export { ShotCoordinatorDO }
 
@@ -15,6 +16,29 @@ export interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>()
+
+// 0. WebSocket Upgrade Protocol Guard (Pre-Auth Route Guard: must precede authGate)
+app.use('/ws', async (c, next) => {
+    const upgradeHeader = c.req.header('Upgrade')
+    if (upgradeHeader !== 'websocket') {
+        return c.text(
+            'HTTP 426 Upgrade Required: WebSocket protocol required',
+            426,
+        )
+    }
+    return next()
+})
+
+app.use('/ws/telemetry', async (c, next) => {
+    const upgradeHeader = c.req.header('Upgrade')
+    if (upgradeHeader !== 'websocket') {
+        return c.text(
+            'HTTP 426 Upgrade Required: WebSocket protocol required',
+            426,
+        )
+    }
+    return next()
+})
 
 // 0. WebSocket Upgrade Protocol Guard (Pre-Auth Route Guard: must precede authGate)
 app.use('/ws', async (c, next) => {
@@ -109,29 +133,7 @@ app.all('/lease/*', async (c) => {
     return stub.fetch(c.req.raw)
 })
 
-// 6. Assembly Receipt Provenance Settlement Intent
-app.post('/assembly/receipt', async (c) => {
-    const body = await c.req.json()
-    const episodeId = body.episodeId || 'ep01'
-    const sceneId = body.sceneId || 'sc01'
-    const gitCommitSha =
-        body.gitCommitSha || '0000000000000000000000000000000000000000'
-    const canonMerkleRoot =
-        body.canonMerkleRoot ||
-        '0000000000000000000000000000000000000000000000000000000000000000'
-
-    const ackId = `ack_${Date.now()}`
-
-    return c.json({
-        ok: true,
-        ackId,
-        episodeId,
-        sceneId,
-        status: 'SEALED',
-        gitCommitSha,
-        canonMerkleRoot,
-        settledAtMs: Date.now(),
-    })
-})
+// 6. Mount Assembly Telemetry Sink & Provenance Settlement Router
+app.route('/assembly', assemblyRoutes)
 
 export default app
