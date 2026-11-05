@@ -1,1 +1,6 @@
-export { initSomaticdsp, translateSomaticDsp } from './buz/somaticdsp.buzz.js';
+export {
+  initSomaticdsp,
+  updateSomaticdsp,
+  translateSomaticDsp,
+  mapSomaticToAcousticDsp,
+} from './buz/somaticdsp.buzz.js';

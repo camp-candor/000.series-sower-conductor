@@ -20,6 +20,7 @@ import MenuUnit from './98.menu.unit/menu.unit.js'
 import { RemotionModel } from './35.remotion.unit/remotion.model.js'
 import { EdgeBridgeModel } from './36.edgebridge.unit/edgebridge.model.js'
 import { LifecycleModel } from './37.lifecycle.unit/lifecycle.model.js'
+import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js'
 import { Model } from './99.core/interface/model.interface.js'
 
 export const list: Array<any> = [
@@ -93,7 +94,7 @@ export default class UnitData implements Model {
   logistic: any;
   sqlite: any;
   speech: any;
-  somaticdsp: any;
+  somaticdsp: any = new SomaticdspModel();
   ledger: any;
   frame: any;
   vram: any;
