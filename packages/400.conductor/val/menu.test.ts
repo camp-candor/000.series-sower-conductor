@@ -6,7 +6,7 @@ import * as ActMnu from '../98.menu.unit/menu.action.js';
 
 describe('packages/400.conductor 98.menu.unit Phase 7 Edge Flight Deck Integration', () => {
   it('strictly contains zero src/ directory in packages/400.conductor', () => {
-    const srcPath = path.resolve(process.cwd(), 'packages/400.conductor/src');
+    const srcPath = path.resolve(process.cwd().endsWith('400.conductor') ? process.cwd() : path.join(process.cwd(), 'packages/400.conductor'), 'src');
     expect(fs.existsSync(srcPath)).toBe(false);
   });
 
@@ -61,7 +61,7 @@ describe('packages/400.conductor 98.menu.unit Phase 7 Edge Flight Deck Integrati
   });
 
   it('asserts 100% pure 7-bit ASCII compliance across 98.menu.unit', () => {
-    const dir = path.resolve(process.cwd(), 'packages/400.conductor/98.menu.unit');
+    const dir = path.resolve(process.cwd().endsWith('400.conductor') ? process.cwd() : path.join(process.cwd(), 'packages/400.conductor'), '98.menu.unit');
     const scanDir = (target: string) => {
       const files = fs.readdirSync(target, { withFileTypes: true });
       for (const f of files) {
@@ -79,4 +79,3 @@ describe('packages/400.conductor 98.menu.unit Phase 7 Edge Flight Deck Integrati
     scanDir(dir);
   });
 });
-

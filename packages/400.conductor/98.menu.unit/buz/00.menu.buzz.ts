@@ -314,4 +314,3 @@ export const stalenessEdgeMenu = async (cpy: MenuModel, bal: MenuBit, ste: State
 export const transmitEdgeMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
   return updateMenu(cpy, { ...bal, src: 'TRANSMIT ASSEMBLY RECEIPT TO EDGE' }, ste);
 };
-
