@@ -13,15 +13,9 @@ export class UpdateMenu implements Action {
   constructor(public bale: MenuBit) {}
 }
 
-export const STAMP_REMOTION_MENU = '[Menu action] Stamp Remotion Menu';
-export class StampRemotionMenu implements Action {
-  readonly type = STAMP_REMOTION_MENU;
-  constructor(public bale: MenuBit) {}
-}
-
-export const VERIFY_REMOTION_MENU = '[Menu action] Verify Remotion Menu';
-export class VerifyRemotionMenu implements Action {
-  readonly type = VERIFY_REMOTION_MENU;
+export const RUN_LIFECYCLE_MENU = '[Menu action] Run Lifecycle Menu';
+export class RunLifecycleMenu implements Action {
+  readonly type = RUN_LIFECYCLE_MENU;
   constructor(public bale: MenuBit) {}
 }
 
@@ -58,8 +52,7 @@ export class TransmitEdgeMenu implements Action {
 export type Actions =
   | InitMenu
   | UpdateMenu
-  | StampRemotionMenu
-  | VerifyRemotionMenu
+  | RunLifecycleMenu
   | ToggleEdgeMenu
   | PingEdgeMenu
   | LeaseEdgeMenu

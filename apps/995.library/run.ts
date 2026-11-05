@@ -289,7 +289,7 @@ const init = async () => {
             args.includes('--conductor') ||
             args.includes('--package=400.conductor') ||
             idx === 'conductor' ||
-            idx === '400.conductor'
+            idx === '400.conductor' || process.env.TARGET_PACKAGE === '400.conductor' || args.includes('-p=400.conductor')
 
         if (isConductorTarget) {
             try {

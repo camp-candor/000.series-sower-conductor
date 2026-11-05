@@ -7,4 +7,5 @@ export class MenuModel implements Menu {
   statusMessage: string = 'IDLE';
   lastRemotionReceipt: string | null = null;
   lastEdgeReceipt: string | null = null;
+  lastLifecycleReceipt: string | null = null;
 }
