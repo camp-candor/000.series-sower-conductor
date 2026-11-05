@@ -13,22 +13,33 @@ import * as ActRem from '../../35.remotion.unit/remotion.action.js';
 import * as ActEdge from '../../36.edgebridge.unit/edgebridge.action.js';
 import * as ActAst from '../../34.abstractsyntaxtree.unit/ast.action.js';
 
+export interface ChainLifecycleOptions {
+  mockCoordinatorEpoch?: number;
+  fountainSourceScript?: string;
+}
+
 export async function chainMasterSceneLifecycle(
   ctx: MasterSceneLifecycleContext,
-  ste?: State
+  ste?: State,
+  options: ChainLifecycleOptions = {}
 ): Promise<MasterSceneLifecycleContext> {
   const log = (msg: string) => {
     ctx.telemetryLogs.push(msg);
     process.stdout.write(`${msg}\n`);
   };
 
+  const startTime = Date.now();
+
   try {
     log(`>> [LIFECYCLE] Initiating master scene lifecycle for ${ctx.sceneId}...`);
 
-    // STAGE 1: Relational Pre-Flight Inception Gate ($T_0 = $0.00)
+    // STAGE 1: Relational Pre-Flight Inception Gate (T0 = $0.00)
     ctx.currentStage = 'STAGE_1_INCEPTION_PREFLIGHT';
     if (ctx.isDirty) {
-      throw new Error(`Precondition Failed: Scene ${ctx.sceneId} is marked dirty in CANON_DB.`);
+      const elapsedMs = Date.now() - startTime;
+      const err = `Precondition Failed: Scene ${ctx.sceneId} is marked dirty in CANON_DB (Evaluated in ${elapsedMs}ms).`;
+      log(`>> [STAGE 1] [FAIL] ${err}`);
+      throw new Error(err);
     }
     log(`>> [STAGE 1] Preflight Inception: 0 dirty dependencies verified ($T_0 = $0.00).`);
 
@@ -36,7 +47,11 @@ export async function chainMasterSceneLifecycle(
     ctx.currentStage = 'STAGE_2_AST_VERBATIM_LOCK';
     for (const shot of ctx.shots) {
       if (!shot.dialogueText || shot.dialogueText.trim().length === 0) {
-        throw new Error(`AST Error: Shot ${shot.shotId} missing verbatim dialogue.`);
+        throw new Error(`PARITY_CHECK_FAILED: Shot ${shot.shotId} missing verbatim dialogue.`);
+      }
+
+      if (options.fountainSourceScript && !options.fountainSourceScript.includes(shot.dialogueText.trim())) {
+        throw new Error(`PARITY_CHECK_FAILED: Dialogue in shot ${shot.shotId} diverges from Fountain screenplay prose.`);
       }
     }
     log(`>> [STAGE 2] Dialogue AST verbatim parity verified across ${ctx.shots.length} shots.`);
@@ -59,6 +74,13 @@ export async function chainMasterSceneLifecycle(
 
     // STAGE 5: Concurrency Mutex & Monotonic Epoch Fencing
     ctx.currentStage = 'STAGE_5_HARDWARE_MUTEX_ACQUIRED';
+    const assignedEpoch = ctx.activeEpoch ?? 1;
+
+    // Check for stale epoch zombie worker injection
+    if (options.mockCoordinatorEpoch !== undefined && assignedEpoch < options.mockCoordinatorEpoch) {
+      throw new Error(`HTTP 409 Conflict: ZOMBIE_LEASE_EPOCH (Presented epoch ${assignedEpoch} < active coordinator epoch ${options.mockCoordinatorEpoch}).`);
+    }
+
     if (ste) {
       const leaseRes = await ste.hunt(ActEdge.ACQUIRE_HARDWARE_LEASE, {
         src: ctx.sceneId,
@@ -66,10 +88,10 @@ export async function chainMasterSceneLifecycle(
         dat: { sceneId: ctx.sceneId, jobId: `job_${ctx.sceneId}` },
       });
       ctx.activeLeaseId = leaseRes.edgebridgeBit?.dat?.receipt?.leaseId || `lease_${ctx.sceneId}_${Date.now()}`;
-      ctx.activeEpoch = leaseRes.edgebridgeBit?.dat?.receipt?.epoch || 1;
+      ctx.activeEpoch = leaseRes.edgebridgeBit?.dat?.receipt?.epoch || assignedEpoch;
     } else {
       ctx.activeLeaseId = `lease_${ctx.sceneId}_${Date.now()}`;
-      ctx.activeEpoch = 1;
+      ctx.activeEpoch = assignedEpoch;
     }
     log(`>> [STAGE 5] Granted hardware lease: ${ctx.activeLeaseId} (Epoch: ${ctx.activeEpoch}).`);
 
