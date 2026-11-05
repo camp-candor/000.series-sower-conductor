@@ -6,6 +6,7 @@ import * as ActLfc from '../../37.lifecycle.unit/lifecycle.action.js'
 import * as ActEdge from '../../36.edgebridge.unit/edgebridge.action.js'
 import * as ActRem from '../../35.remotion.unit/remotion.action.js'
 import * as ActAst from '../../34.abstractsyntaxtree.unit/ast.action.js'
+import * as ActSmt from '../../10.somaticdsp.unit/somaticdsp.action.js'
 
 let rootSlv: Function | null = null
 
@@ -28,6 +29,8 @@ const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         '>> [TOOLTIP] Assert character-exact dialogue parity between Fountain screenplay prose and Remotion AST dialogue nodes.',
     'AUDIT DIALOGUE AST CONTRACT':
         '>> [TOOLTIP] Validate closed Zod schema and 7-bit clean ASCII parity against drafts/dialogue_ast.json ($T_0 = $0.00).',
+    'INSPECT CHARACTER SOMATIC DSP':
+        '>> [TOOLTIP] Convert physical fatigue and trauma metrics into continuous DSP modifiers.',
     'SEAL UNIVERSAL PROVENANCE LOCKFILE':
         '>> [TOOLTIP] Mint RFC 8785 canonical lockfile and emit dual WORM snapshots to vault/snapshots/ directory.',
     'VERIFY RIG 1 HARDWARE ZERO-VRAM':
@@ -106,6 +109,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'STAMP STATIC REMOTION TSX (ep01)',
         'AUDIT REMOTION COMPOSITION AST',
         'AUDIT DIALOGUE AST CONTRACT',
+        'INSPECT CHARACTER SOMATIC DSP',
         'SEAL UNIVERSAL PROVENANCE LOCKFILE',
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
         'INSPECT SQLITE CONTINUITY LEDGER',
@@ -280,6 +284,44 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
                 )
             } else {
                 await cns(`>> [AST-INGESTION] [FAIL] Schema validation failed.`)
+            }
+            break
+        }
+
+        case 'INSPECT CHARACTER SOMATIC DSP': {
+            const bit = await ste.hunt(ActSmt.TRANSLATE_SOMATIC_DSP, {
+                dat: {
+                    somaticState: {
+                        character_id: 'char_bog',
+                        fatigue_bps: 8200,
+                        pain_bps: 4500,
+                        refusal_strain_bps: 1200,
+                        is_conscious: true,
+                        active_conditions: ['crushed_larynx'],
+                        banned_kinetic_verbs: [],
+                    },
+                    somaticInput: {
+                        character_id: 'char_bog',
+                        base_pitch_shift_semitones: 2.245,
+                        formant_warping_factor: 1.0,
+                        base_vocal_fry: 0.0,
+                        vocal_fry_bps: 1700,
+                    },
+                },
+            })
+            const receipt = bit?.smtBit?.dat?.receipt
+            if (receipt?.ok) {
+                const mods = receipt.modifiers
+                await cns(
+                    `>> [SOMATIC-DSP] [OK] Translated [${receipt.character_id}]: Pitch=${mods.effective_pitch_semitones >= 0 ? '+' : ''}${mods.effective_pitch_semitones.toFixed(2)}st, Formant=${mods.effective_formant_warping.toFixed(3)}, Fry=${mods.effective_vocal_fry_density.toFixed(3)}`,
+                )
+                await cns(
+                    '>> [MENU:SOMATIC] Inspection Complete. Modifiers calculated.',
+                )
+            } else {
+                await cns(
+                    `>> [SOMATIC-DSP] [FAIL] ${receipt?.breach_reason || 'Translation failed.'}`,
+                )
             }
             break
         }
