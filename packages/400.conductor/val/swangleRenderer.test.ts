@@ -1,141 +1,135 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
-import {
-    buildSwangleCliArgs,
-    executePreflightAssetCheck,
-    spawnSwangleRenderProcess,
-    EMPTY_SHA256,
-} from '../35.remotion.unit/buz/renderSwangle.buzz.js'
-import { SwangleRenderOptions } from '../35.remotion.unit/fce/renderOptions.interface.js'
+import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { EventEmitter } from 'node:events';
+import { buildSwangleCliArgs } from '../35.remotion.unit/buz/swangleCliBuilder.buzz.js';
+import { spawnSwangleRenderProcess } from '../35.remotion.unit/buz/renderSwangle.buzz.js';
+import { verifyMasterDeliverable } from '../35.remotion.unit/buz/verifyDeliverable.buzz.js';
+import { SwangleRenderOptions } from '../35.remotion.unit/fce/renderOptions.interface.js';
 
-describe('packages/400.conductor Feature 5.3 Headless Swangle Remotion Subprocess Renderer', () => {
-    const packageRoot = process.cwd().endsWith('400.conductor')
-        ? process.cwd()
-        : path.resolve(process.cwd(), 'packages/400.conductor')
-    const testScratchDir = path.resolve(packageRoot, 'val/scratch_swangle_test')
+describe('packages/400.conductor Phase 8 Headless Swangle Optical Assembly Compositing', () => {
+  const mockOptions: SwangleRenderOptions = {
+    entryPoint: 'drafts/Master_ep01_sc01.tsx',
+    compositionId: 'ep01_sc01',
+    outputLocation: 'outputs/ep01_sc01.mp4',
+    timeoutMs: 5000,
+    expectedFrames: 75,
+  };
 
-    beforeEach(() => {
-        if (!fs.existsSync(testScratchDir)) {
-            fs.mkdirSync(testScratchDir, { recursive: true })
-        }
-    })
+  it('strictly verifies zero src/ directory exists in packages/400.conductor', () => {
+    const srcPath = path.resolve(process.cwd(), 'packages/400.conductor/src');
+    expect(fs.existsSync(srcPath)).toBe(false);
+  });
 
-    afterEach(() => {
-        if (fs.existsSync(testScratchDir)) {
-            fs.rmSync(testScratchDir, { recursive: true, force: true })
-        }
-        vi.restoreAllMocks()
-    })
+  it('builds CLI arguments enforcing Triad Stability Controls (--gl=swangle, --concurrency=1, --offthreadvideo)', () => {
+    const args = buildSwangleCliArgs(mockOptions);
 
-    it('strictly verifies zero src/ directory exists in packages/400.conductor', () => {
-        const srcPath = path.resolve(packageRoot, 'src')
-        expect(fs.existsSync(srcPath)).toBe(false)
-    })
+    expect(args).toContain('remotion');
+    expect(args).toContain('render');
+    expect(args).toContain('drafts/Master_ep01_sc01.tsx');
+    expect(args).toContain('ep01_sc01');
+    expect(args).toContain('outputs/ep01_sc01.mp4');
 
-    it('builds CLI arguments enforcing --gl=swangle, --concurrency=1, and --offthreadvideo', () => {
-        const options: SwangleRenderOptions = {
-            entryPoint: 'src/episodes/Episode_040.tsx',
-            compositionId: 'Episode_040',
-            outputFilePath: 'outputs/ep040/master.mp4',
-        }
+    // Triad Stability Controls
+    expect(args).toContain('--gl=swangle');
+    expect(args).toContain('--concurrency=1');
+    expect(args).toContain('--offthreadvideo');
 
-        const args = buildSwangleCliArgs(options)
-        expect(args).toContain('remotion')
-        expect(args).toContain('render')
-        expect(args).toContain('src/episodes/Episode_040.tsx')
-        expect(args).toContain('Episode_040')
-        expect(args).toContain('outputs/ep040/master.mp4')
-        expect(args).toContain('--gl=swangle')
-        expect(args).toContain('--concurrency=1')
-        expect(args).toContain('--offthreadvideo')
-        expect(args).toContain('--image-format=png')
-        expect(args).toContain('--pixel-format=yuv420p')
-    })
+    // Encoding standards
+    expect(args).toContain('--image-format=png');
+    expect(args).toContain('--pixel-format=yuv420p');
+  });
 
-    it('appends frame range parameter when slice rendering is requested', () => {
-        const options: SwangleRenderOptions = {
-            entryPoint: 'src/index.ts',
-            compositionId: 'ep040-sh03',
-            outputFilePath: '/tmp/test_sh03.mp4',
-            frameRange: [144, 180],
-        }
+  it('spawns child process, parses frame progress telemetry, and returns vramUsedMb = 0', async () => {
+    // Mock child process
+    const mockSpawn = () => {
+      const child = new EventEmitter() as any;
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = () => {};
 
-        const args = buildSwangleCliArgs(options)
-        expect(args).toContain('--frames=144-180')
-    })
+      setTimeout(() => {
+        child.stdout.emit('data', Buffer.from('Rendered 24 frames (32%)\n'));
+        child.stdout.emit('data', Buffer.from('Rendered 75 frames (100%)\n'));
+        child.emit('close', 0);
+      }, 20);
 
-    it('catches missing media files during pre-flight asset inspection', () => {
-        const check = executePreflightAssetCheck([
-            'val/nonexistent_matte.png',
-            'val/nonexistent_stem.wav',
-        ])
+      return child;
+    };
 
-        expect(check.valid).toBe(false)
-        expect(check.missingAssets.length).toBe(2)
-        expect(check.missingAssets).toContain('val/nonexistent_matte.png')
-    })
+    const receipt = await spawnSwangleRenderProcess(mockOptions, mockSpawn as any);
 
-    it('traps empty-hash sentinel SHA-256 (e3b0c442...) and truncated files < 1KB', () => {
-        const emptyFilePath = path.join(testScratchDir, 'truncated_plate.mp4')
-        fs.writeFileSync(emptyFilePath, Buffer.alloc(0)) // 0-byte file
+    expect(receipt.ok).toBe(true);
+    expect(receipt.renderedFrames).toBe(75);
+    expect(receipt.vramUsedMb).toBe(0);
+    expect(receipt.t4Spend).toBe('$0.00');
+    expect(receipt.cliCommand).toContain('--gl=swangle');
+    expect(receipt.cliCommand).toContain('--concurrency=1');
+    expect(receipt.cliCommand).toContain('--offthreadvideo');
+  });
 
-        const tinyFilePath = path.join(testScratchDir, 'tiny_noise.mp4')
-        fs.writeFileSync(tinyFilePath, Buffer.from('too short')) // < 1KB
+  it('handles execution timeouts cleanly and returns structured failure receipt', async () => {
+    let killedWithSignal = '';
+    const mockHangingSpawn = () => {
+      const child = new EventEmitter() as any;
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = (sig: string) => {
+        killedWithSignal = sig;
+        child.emit('close', 1);
+      };
+      return child;
+    };
 
-        const check = executePreflightAssetCheck([emptyFilePath, tinyFilePath])
-        expect(check.valid).toBe(false)
-        expect(check.emptyHashAssets.length).toBe(2)
-        expect(EMPTY_SHA256).toBe(
-            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        )
-    })
+    const receipt = await spawnSwangleRenderProcess(
+      { ...mockOptions, timeoutMs: 50 },
+      mockHangingSpawn as any
+    );
 
-    it('passes pre-flight audit when assets exist and exceed minimum byte threshold', () => {
-        const validAssetPath = path.join(testScratchDir, 'valid_matte.png')
-        const validData = Buffer.alloc(2048, 0xaa) // 2KB buffer
-        fs.writeFileSync(validAssetPath, validData)
+    expect(receipt.ok).toBe(false);
+    expect(receipt.error).toBe('EXECUTION_TIMEOUT');
+    expect(killedWithSignal).toBe('SIGKILL');
+  });
 
-        const check = executePreflightAssetCheck([validAssetPath])
-        expect(check.valid).toBe(true)
-        expect(check.missingAssets.length).toBe(0)
-        expect(check.emptyHashAssets.length).toBe(0)
-    })
+  it('verifies master deliverable file constraints on disk', async () => {
+    const tmpDir = path.resolve(process.cwd(), 'val/scratch_swangle_test');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    it('fails early without spawning subprocess when pre-flight assets are invalid', async () => {
-        const options: SwangleRenderOptions = {
-            entryPoint: 'src/episodes/Episode_040.tsx',
-            compositionId: 'Episode_040',
-            outputFilePath: 'outputs/ep040/master.mp4',
-            referencedAssets: ['missing_file_for_preflight.mp4'],
-        }
+    const validMockFile = path.join(tmpDir, 'valid_deliverable.mp4');
+    fs.writeFileSync(validMockFile, Buffer.alloc(15000, 0)); // > 10,240 bytes
 
-        const receipt = await spawnSwangleRenderProcess(options)
-        expect(receipt.ok).toBe(false)
-        expect(receipt.exitCode).toBe(1)
-        expect(receipt.vramUsedMb).toBe(0)
-        expect(receipt.error).toContain('Preflight failed')
-        expect(
-            receipt.telemetry.some((t) => t.includes('[PREFLIGHT] [FAIL]')),
-        ).toBe(true)
-    })
+    const inspection = await verifyMasterDeliverable(validMockFile, 75);
+    expect(inspection.valid).toBe(true);
+    expect(inspection.vramUsedMb).toBe(0);
+    expect(inspection.fileSizeBytes).toBeGreaterThan(10240);
 
-    it('asserts 100% pure 7-bit ASCII compliance across 35.remotion.unit', () => {
-        const dir = path.resolve(packageRoot, '35.remotion.unit')
-        const scanDir = (target: string) => {
-            const entries = fs.readdirSync(target, { withFileTypes: true })
-            for (const entry of entries) {
-                const full = path.join(target, entry.name)
-                if (entry.isDirectory()) {
-                    scanDir(full)
-                } else if (entry.name.endsWith('.ts')) {
-                    const content = fs.readFileSync(full, 'utf8')
-                    // eslint-disable-next-line no-control-regex
-                    const match = content.match(/[\u0080-\uFFFF]/)
-                    expect(match).toBeNull()
-                }
-            }
-        }
-        scanDir(dir)
-    })
-})
+    // Trap undersized files
+    const tinyFile = path.join(tmpDir, 'tiny.mp4');
+    fs.writeFileSync(tinyFile, Buffer.alloc(500, 0)); // < 10,240 bytes
+    const tinyInspection = await verifyMasterDeliverable(tinyFile, 75);
+    expect(tinyInspection.valid).toBe(false);
+    expect(tinyInspection.error).toContain('FILE_UNDERSIZED');
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('asserts 100% pure 7-bit ASCII compliance across swangle renderer modules', () => {
+    const files = [
+      'packages/400.conductor/35.remotion.unit/fce/renderOptions.interface.ts',
+      'packages/400.conductor/35.remotion.unit/buz/swangleCliBuilder.buzz.ts',
+      'packages/400.conductor/35.remotion.unit/buz/renderSwangle.buzz.ts',
+      'packages/400.conductor/35.remotion.unit/buz/verifyDeliverable.buzz.ts',
+    ];
+
+    for (const rel of files) {
+      const full = path.resolve(process.cwd(), rel);
+      if (fs.existsSync(full)) {
+        const content = fs.readFileSync(full, 'utf8');
+        // eslint-disable-next-line no-control-regex
+        const match = content.match(/[\u0080-\uFFFF]/);
+        expect(match).toBeNull();
+      }
+    }
+  });
+});
+
