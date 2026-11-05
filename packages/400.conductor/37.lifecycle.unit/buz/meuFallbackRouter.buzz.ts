@@ -1,0 +1,48 @@
+import { MeuRepairDecision } from '../fce/masterLifecycle.interface.js';
+
+export function routeMeuRepair(
+  sceneId: string,
+  modifiedBeatIndex: number,
+  totalBeats: number
+): MeuRepairDecision {
+  if (totalBeats <= 0) {
+    return {
+      sceneId,
+      action: 'ESCALATE',
+      repairSpanRatio: 1.0,
+      affectedBeats: 0,
+      totalBeats: 0,
+      reason: 'INVALID_BEAT_COUNT: Total beats must be greater than zero',
+    };
+  }
+
+  // Calculate forward-affected beats: from modified index to the end of the scene
+  const clampedIndex = Math.max(1, Math.min(modifiedBeatIndex, totalBeats));
+  const affectedBeats = totalBeats - clampedIndex + 1;
+  const repairSpanRatio = Math.round((affectedBeats / totalBeats) * 10000) / 10000;
+
+  // 40% Ceiling Law: If blast radius > 0.40, escalate to human editorial review
+  if (repairSpanRatio > 0.40) {
+    const reason = `BLAST_RADIUS_EXCEEDED: Invalidation span (${(repairSpanRatio * 100).toFixed(1)}%) exceeds 40% threshold (${affectedBeats}/${totalBeats} beats).`;
+    process.stderr.write(`>> [MEU] [ESCALATE] ${reason}\n`);
+    return {
+      sceneId,
+      action: 'ESCALATE',
+      repairSpanRatio,
+      affectedBeats,
+      totalBeats,
+      reason,
+    };
+  }
+
+  const reason = `INFILL_AUTHORIZED: Invalidation span (${(repairSpanRatio * 100).toFixed(1)}%) is within 40% threshold (${affectedBeats}/${totalBeats} beats).`;
+  process.stdout.write(`>> [MEU] [OK] ${reason}\n`);
+  return {
+    sceneId,
+    action: 'INFILL',
+    repairSpanRatio,
+    affectedBeats,
+    totalBeats,
+    reason,
+  };
+}
