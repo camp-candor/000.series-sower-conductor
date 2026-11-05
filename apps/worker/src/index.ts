@@ -1,4 +1,7 @@
 import { Hono } from 'hono'
+import { ShotCoordinatorDO } from './objects/ShotCoordinatorDO.js'
+
+export { ShotCoordinatorDO }
 import { authGate } from './middleware/authGate.js'
 import { stalenessGate } from './middleware/stalenessGate.js'
 import { intentSanitizer } from './middleware/intentSanitizer.js'
@@ -17,144 +20,6 @@ export interface ActiveLeaseRecord {
     workerId: string
     epoch: number
     expiryEpochMs: number
-}
-
-export class ShotCoordinatorDO {
-    private currentEpoch: number = 0
-    private activeLeases: Map<string, ActiveLeaseRecord> = new Map()
-
-    constructor(_state: DurableObjectState) {}
-
-    async fetch(request: Request): Promise<Response> {
-        const url = new URL(request.url)
-
-        if (url.pathname === '/lease/acquire' && request.method === 'POST') {
-            const body = (await request.json().catch(() => ({}))) as {
-                shot_id?: string
-                ttl_ms?: number
-                worker_id?: string
-            }
-
-            if (!body.shot_id || !body.ttl_ms || !body.worker_id) {
-                return new Response(
-                    JSON.stringify({ error: 'MISSING_LEASE_PARAMETERS' }),
-                    {
-                        status: 400,
-                        headers: { 'content-type': 'application/json' },
-                    },
-                )
-            }
-
-            const nowMs = Date.now()
-            const existing = this.activeLeases.get(body.shot_id)
-
-            if (existing && existing.expiryEpochMs > nowMs) {
-                return new Response(
-                    JSON.stringify({
-                        granted: false,
-                        reason: 'LEASE_LOCKED',
-                        active_worker: existing.workerId,
-                        expires_in_ms: existing.expiryEpochMs - nowMs,
-                    }),
-                    {
-                        status: 409,
-                        headers: { 'content-type': 'application/json' },
-                    },
-                )
-            }
-
-            this.currentEpoch += 1
-            const expiryEpochMs = nowMs + body.ttl_ms
-            const record: ActiveLeaseRecord = {
-                shotId: body.shot_id,
-                workerId: body.worker_id,
-                epoch: this.currentEpoch,
-                expiryEpochMs,
-            }
-
-            this.activeLeases.set(body.shot_id, record)
-
-            return new Response(
-                JSON.stringify({
-                    granted: true,
-                    shot_id: body.shot_id,
-                    worker_id: body.worker_id,
-                    epoch: this.currentEpoch,
-                    expiry_epoch_ms: expiryEpochMs,
-                }),
-                {
-                    status: 200,
-                    headers: { 'content-type': 'application/json' },
-                },
-            )
-        }
-
-        if (url.pathname === '/lease/heartbeat' && request.method === 'POST') {
-            const body = (await request.json().catch(() => ({}))) as {
-                shot_id?: string
-                ttl_ms?: number
-                epoch?: number
-            }
-
-            if (
-                !body.shot_id ||
-                !body.ttl_ms ||
-                typeof body.epoch !== 'number'
-            ) {
-                return new Response(
-                    JSON.stringify({ error: 'MISSING_HEARTBEAT_PARAMETERS' }),
-                    {
-                        status: 400,
-                        headers: { 'content-type': 'application/json' },
-                    },
-                )
-            }
-
-            const existing = this.activeLeases.get(body.shot_id)
-            if (!existing) {
-                return new Response(
-                    JSON.stringify({ error: 'LEASE_NOT_FOUND' }),
-                    {
-                        status: 404,
-                        headers: { 'content-type': 'application/json' },
-                    },
-                )
-            }
-
-            if (existing.epoch !== body.epoch) {
-                return new Response(
-                    JSON.stringify({
-                        error: 'STALE_EPOCH_FENCE',
-                        current_epoch: existing.epoch,
-                        presented_epoch: body.epoch,
-                    }),
-                    {
-                        status: 409,
-                        headers: { 'content-type': 'application/json' },
-                    },
-                )
-            }
-
-            const nowMs = Date.now()
-            existing.expiryEpochMs = nowMs + body.ttl_ms
-            this.activeLeases.set(body.shot_id, existing)
-
-            return new Response(
-                JSON.stringify({
-                    status: 'EXTENDED',
-                    shot_id: body.shot_id,
-                    epoch: existing.epoch,
-                    expiry_epoch_ms: existing.expiryEpochMs,
-                }),
-                {
-                    status: 200,
-                    headers: { 'content-type': 'application/json' },
-                },
-            )
-        }
-
-        return new Response('NOT_FOUND', { status: 404 })
-    }
 }
 
 const app = new Hono<{ Bindings: Env }>()
@@ -217,33 +82,10 @@ app.get('/staleness/:scene_id', async (c) => {
     )
 })
 
-app.post('/lease/request', async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as any;
-  const sceneId = body.sceneId || 'ep01_sc01';
-  const jobId = body.jobId || `job_${Date.now()}`;
-  const ttlMs = body.ttlMs || 30000;
 
-  return c.json({
-    ok: true,
-    lease: {
-      leaseId: `lease_${jobId}_${Date.now()}`,
-      jobId,
-      sceneId,
-      epoch: 1,
-      grantedAtMs: Date.now(),
-      ttlMs,
-      expiresAtMs: Date.now() + ttlMs,
-    },
-  });
-});
 
-app.post('/lease/:action', async (c) => {
-    const action = c.req.param('action')
-    if (action !== 'acquire' && action !== 'heartbeat') {
-        return c.text('NOT_FOUND', 404)
-    }
-
-    const id = c.env.SHOT_COORDINATOR_DO.idFromName('global-shot-coordinator')
+app.all('/lease/*', async (c) => {
+    const id = c.env.SHOT_COORDINATOR_DO.idFromName('global_shot_coordinator')
     const stub = c.env.SHOT_COORDINATOR_DO.get(id)
     return stub.fetch(c.req.raw)
 })
