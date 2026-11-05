@@ -3,6 +3,8 @@ import RemotionBit from '../fce/remotion.bit.js'
 import State from '../../99.core/state.js'
 import { stampStaticComposition } from './stampComposition.buzz.js'
 import { SceneShotPlan } from '../fce/remotion.interface.js'
+import { SwangleRenderOptions } from '../fce/renderOptions.interface.js';
+import { spawnSwangleRenderProcess } from './renderSwangle.buzz.js';
 
 export const initRemotion = async (
     cpy: RemotionModel,
@@ -57,3 +59,33 @@ export const stampStaticCompositionBuzz = async (
 
     return cpy
 }
+
+export const renderSwangleBuzz = async (
+  cpy: import('../remotion.model.js').RemotionModel,
+  bal: import('../fce/remotion.bit.js').default,
+  _ste: import('../../99.core/state.js').default
+) => {
+  const renderOptions = bal.dat?.renderOptions as SwangleRenderOptions;
+  if (!renderOptions) {
+    if (bal.slv) bal.slv({ remotionBit: { idx: 'render-swangle', val: 0, src: 'MISSING_RENDER_OPTIONS' } });
+    return cpy;
+  }
+
+  const receipt = await spawnSwangleRenderProcess(renderOptions);
+  cpy.lastRenderReceipt = receipt;
+  cpy.status = receipt.ok ? 'RENDER_SUCCESS' : 'RENDER_FAILED';
+  cpy.lastActionTimestamp = Date.now();
+
+  if (bal.slv) {
+    bal.slv({
+      remotionBit: {
+        idx: 'render-swangle',
+        val: receipt.ok ? 1 : 0,
+        src: receipt.ok ? 'RENDER_COMPLETE' : receipt.error || 'RENDER_FAILED',
+        dat: { receipt },
+      },
+    });
+  }
+
+  return cpy;
+};
