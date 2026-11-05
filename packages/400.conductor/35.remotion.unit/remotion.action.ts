@@ -7,6 +7,12 @@ export class InitRemotion implements Action {
     constructor(public bale: RemotionBit) {}
 }
 
+export const UPDATE_REMOTION = '[Remotion action] Update Remotion'
+export class UpdateRemotion implements Action {
+    readonly type = UPDATE_REMOTION
+    constructor(public bale: RemotionBit) {}
+}
+
 export const STAMP_STATIC_COMPOSITION =
     '[Remotion action] Stamp Static Composition'
 export class StampStaticComposition implements Action {
@@ -41,6 +47,7 @@ export class RenderSwangle implements Action {
 
 export type Actions =
     | InitRemotion
+    | UpdateRemotion
     | StampStaticComposition
     | MutateMeuAst
     | CheckEjectLock

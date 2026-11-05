@@ -1,8 +1,11 @@
-import { ShotBakingInput, formatUnquotedLiteral } from './literalBaking.buzz.js';
-import { CameraKinematicsSpec } from '../fce/remotion.interface.js';
+import { ShotBakingInput, formatUnquotedLiteral } from './literalBaking.buzz.js'
+import {
+    CameraKinematicsSpec,
+    SceneShotPlan,
+} from '../fce/remotion.interface.js'
 
 export function generateDespillSvgFilter(): string {
-  return `
+    return `
       {/* Layer 3: Algorithmic Chroma Despill Filter */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
         <filter id="greenscreen-despill">
@@ -17,12 +20,15 @@ export function generateDespillSvgFilter(): string {
           />
         </filter>
       </svg>
-  `.trim();
+  `.trim()
 }
 
-export function generateVectorTypographyComponent(dialogueText: string, characterId: string): string {
-  const cleanText = dialogueText.replace(/[\\"]/g, '\\$&').replace(/\n/g, ' ');
-  return `
+export function generateVectorTypographyComponent(
+    dialogueText: string,
+    characterId: string,
+): string {
+    const cleanText = dialogueText.replace(/[\\"]/g, '\\$&').replace(/\n/g, ' ')
+    return `
         {/* Layer 2: Practical Atmosphere & Vector Typography (Zero-Diffusion Text Rule) */}
         <div style={{
           position: 'absolute',
@@ -60,29 +66,37 @@ export function generateVectorTypographyComponent(dialogueText: string, characte
             {${JSON.stringify(cleanText)}}
           </p>
         </div>
-  `.trim();
+  `.trim()
 }
 
 export function generateShotComponentCode(
-  shot: ShotBakingInput,
-  index: number,
-  cameraSpec?: CameraKinematicsSpec
+    shot: ShotBakingInput,
+    index: number,
+    cameraSpec?: CameraKinematicsSpec,
 ): string {
-  const compName = `Shot${(index + 1).toString().padStart(2, '0')}CameraWrapper`;
-  const dur = formatUnquotedLiteral(shot.deliveryFrames);
-  const trim = formatUnquotedLiteral(shot.trimEndFrames);
+    const compName = `Shot${(index + 1).toString().padStart(2, '0')}CameraWrapper`
+    const dur = formatUnquotedLiteral(shot.deliveryFrames)
+    const trim = formatUnquotedLiteral(shot.trimEndFrames)
 
-  const origX = formatUnquotedLiteral(cameraSpec?.originXPercent ?? shot.transformOriginX);
-  const origY = formatUnquotedLiteral(cameraSpec?.originYPercent ?? shot.transformOriginY);
-  const startScale = formatUnquotedLiteral(cameraSpec?.startScale ?? shot.initialScale);
-  const targetScale = formatUnquotedLiteral(cameraSpec?.targetScale ?? shot.targetScale);
+    const origX = formatUnquotedLiteral(
+        cameraSpec?.originXPercent ?? shot.transformOriginX,
+    )
+    const origY = formatUnquotedLiteral(
+        cameraSpec?.originYPercent ?? shot.transformOriginY,
+    )
+    const startScale = formatUnquotedLiteral(
+        cameraSpec?.startScale ?? shot.initialScale,
+    )
+    const targetScale = formatUnquotedLiteral(
+        cameraSpec?.targetScale ?? shot.targetScale,
+    )
 
-  const mode = cameraSpec?.mode || 'SLOW_PUSH_IN';
+    const mode = cameraSpec?.mode || 'SLOW_PUSH_IN'
 
-  let cameraHookLogic = '';
+    let cameraHookLogic = ''
 
-  if (mode === 'CRASH_ZOOM') {
-    cameraHookLogic = `
+    if (mode === 'CRASH_ZOOM') {
+        cameraHookLogic = `
   const frame = useCurrentFrame();
   const cameraScale = spring({
     frame,
@@ -93,29 +107,29 @@ export function generateShotComponentCode(
   });
   const shakeX = 0;
   const shakeY = 0;
-    `.trim();
-  } else if (mode === 'IMPACT_SHAKE' && cameraSpec?.jitterKeyframes) {
-    const tableJson = JSON.stringify(cameraSpec.jitterKeyframes);
-    cameraHookLogic = `
+    `.trim()
+    } else if (mode === 'IMPACT_SHAKE' && cameraSpec?.jitterKeyframes) {
+        const tableJson = JSON.stringify(cameraSpec.jitterKeyframes)
+        cameraHookLogic = `
   const frame = useCurrentFrame();
   const jitterTable: Array<{ frame: number; deltaX: number; deltaY: number }> = ${tableJson};
   const activeKeyframe = jitterTable.find((k) => k.frame === frame) || { deltaX: 0, deltaY: 0 };
   const cameraScale = ${startScale};
   const shakeX = activeKeyframe.deltaX;
   const shakeY = activeKeyframe.deltaY;
-    `.trim();
-  } else {
-    // Default SLOW_PUSH_IN or STATIC
-    cameraHookLogic = `
+    `.trim()
+    } else {
+        // Default SLOW_PUSH_IN or STATIC
+        cameraHookLogic = `
   const frame = useCurrentFrame();
   const progress = interpolate(frame, [0, ${dur}], [0, 1], { extrapolateRight: 'clamp' });
   const cameraScale = interpolate(progress, [0, 1], [${startScale}, ${targetScale}]);
   const shakeX = 0;
   const shakeY = 0;
-    `.trim();
-  }
+    `.trim()
+    }
 
-  return `
+    return `
 // Sequence-Relative Scoped Camera Rig for Shot ${shot.shotId} (${mode})
 const ${compName}: React.FC = () => {
   ${cameraHookLogic}
@@ -183,5 +197,84 @@ const ${compName}: React.FC = () => {
     </div>
   );
 };
-  `.trim();
+  `.trim()
+}
+
+export function generateOpticalStackJsx(
+    shotIndex: number,
+    plan: SceneShotPlan,
+): string {
+    const padIndex = String(shotIndex).padStart(2, '0')
+    const wrapperName = `Shot${padIndex}CameraWrapper`
+
+    return `
+        {/* Shot ${padIndex}: Sequence-Relative Scoped Stack */}
+        <Sequence from={${plan.fromFrame}} durationInFrames={${plan.durationFrames}}>
+          <${wrapperName}>
+            <div style={{ position: 'relative', width: 1920, height: 1080, overflow: 'hidden' }}>
+              {/* Layer 1: Static Environment Matte */}
+              <Img
+                src={staticFile('${plan.bgMattePath}')}
+                style={{ position: 'absolute', width: 1920, height: 1080, zIndex: 1 }}
+              />
+
+              {/* Layer 2: Vector Typography Dynamics */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 96,
+                  width: '100%',
+                  textAlign: 'center',
+                  zIndex: 2,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'sans-serif',
+                    fontSize: 38,
+                    fontWeight: 'bold',
+                    color: '#FFFFFF',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  {${JSON.stringify(plan.dialogueText)}}
+                </span>
+              </div>
+
+              {/* Layer 3: Grounded Character Plane with Algorithmic Despill */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 1920,
+                  height: 1080,
+                  zIndex: 3,
+                  filter: 'drop-shadow(0 20px 10px rgba(0,0,0,0.5))',
+                }}
+              >
+                <Video
+                  src={staticFile('${plan.videoPlatePath}')}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    mixBlendMode: 'normal',
+                  }}
+                />
+              </div>
+
+              {/* Layer 4: Optical Mastering Lens Simulation */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 1920,
+                  height: 1080,
+                  zIndex: 4,
+                  pointerEvents: 'none',
+                  boxShadow: 'inset 0 0 100px rgba(0,0,0,0.3)',
+                }}
+              />
+            </div>
+          </${wrapperName}>
+          <Audio src={staticFile('${plan.audioWavPath}')} volume={1.0} />
+        </Sequence>
+`.trim()
 }

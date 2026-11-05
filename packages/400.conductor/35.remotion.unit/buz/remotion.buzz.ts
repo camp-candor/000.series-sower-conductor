@@ -1,87 +1,92 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { RemotionModel } from '../remotion.model.js';
-import RemotionBit from '../fce/remotion.bit.js';
-import State from '../../99.core/state.js';
+import fs from 'node:fs'
+import path from 'node:path'
+import { RemotionModel } from '../remotion.model.js'
+import RemotionBit from '../fce/remotion.bit.js'
+import State from '../../99.core/state.js'
 import {
-  CompositionMetadata,
-  EjectMarkerStatus,
-  MeuRemediationTicket,
-} from '../fce/remotion.interface.js';
+    CompositionMetadata,
+    EjectMarkerStatus,
+    MeuRemediationTicket,
+} from '../fce/remotion.interface.js'
 import {
-  computeCumulativeShotTimings,
-  formatUnquotedLiteral,
-  ShotBakingInput,
-} from './literalBaking.buzz.js';
+    computeCumulativeShotTimings,
+    formatUnquotedLiteral,
+    ShotBakingInput,
+} from './literalBaking.buzz.js'
 import {
-  generateDespillSvgFilter,
-  generateShotComponentCode,
-} from './opticalStack.buzz.js';
-import { buildCameraKinematicsSpec } from './kinematics.buzz.js';
+    generateDespillSvgFilter,
+    generateShotComponentCode,
+} from './opticalStack.buzz.js'
+import { buildCameraKinematicsSpec } from './kinematics.buzz.js'
 import {
-  generateMultiTrackAudioJsx,
-  MultiTrackAudioPlan,
-} from './acousticDucking.buzz.js';
+    generateMultiTrackAudioJsx,
+    MultiTrackAudioPlan,
+} from './acousticDucking.buzz.js'
 import {
-  inspectEjectLockHeader,
-  executeSurgicalMeuAstMutation,
-} from './meuRepair.buzz.js';
-import { generateUniversalProvenanceLockfile } from './provenance.buzz.js';
+    inspectEjectLockHeader,
+    executeSurgicalMeuAstMutation,
+} from './meuRepair.buzz.js'
+import { generateUniversalProvenanceLockfile } from './provenance.buzz.js'
 
-export { inspectEjectLockHeader };
+export { inspectEjectLockHeader }
 
 export function synthesizeStaticCompositionTsx(
-  sceneId: string,
-  totalFrames: number,
-  shots: ShotBakingInput[],
-  kinematicsModes?: Record<string, 'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE'>,
-  audioPlan?: MultiTrackAudioPlan
+    sceneId: string,
+    totalFrames: number,
+    shots: ShotBakingInput[],
+    kinematicsModes?: Record<
+        string,
+        'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE'
+    >,
+    audioPlan?: MultiTrackAudioPlan,
 ): string {
-  const shotComponents = shots
-    .map((s, idx) => {
-      const mode = kinematicsModes?.[s.shotId] || (idx === 1 ? 'CRASH_ZOOM' : 'SLOW_PUSH_IN');
-      const cameraSpec = buildCameraKinematicsSpec({
+    const shotComponents = shots
+        .map((s, idx) => {
+            const mode =
+                kinematicsModes?.[s.shotId] ||
+                (idx === 1 ? 'CRASH_ZOOM' : 'SLOW_PUSH_IN')
+            const cameraSpec = buildCameraKinematicsSpec({
+                sceneId,
+                shotId: s.shotId,
+                mode,
+                stageX: 960,
+                stageY: 850,
+                localAnchorX: 512,
+                localAnchorY: 800,
+            })
+            return generateShotComponentCode(s, idx, cameraSpec)
+        })
+        .join('\n\n')
+
+    const sequences = shots
+        .map((s, idx) => {
+            const compName = `Shot${(idx + 1).toString().padStart(2, '0')}CameraWrapper`
+            const from = formatUnquotedLiteral(s.fromFrame)
+            const dur = formatUnquotedLiteral(s.deliveryFrames)
+            return `      <Sequence from={${from}} durationInFrames={${dur}}>\n        <${compName} />\n      </Sequence>`
+        })
+        .join('\n')
+
+    const defaultAudioPlan: MultiTrackAudioPlan = audioPlan || {
         sceneId,
-        shotId: s.shotId,
-        mode,
-        stageX: 960,
-        stageY: 850,
-        localAnchorX: 512,
-        localAnchorY: 800,
-      });
-      return generateShotComponentCode(s, idx, cameraSpec);
-    })
-    .join('\n\n');
+        totalDurationFrames: totalFrames,
+        ambientBedPath: 'audio/ambiance/bunker_hum.wav',
+        ambientVolumeLinear: 0.35,
+        duckingFloorDb: -14.0,
+        dialogueClips: shots.map((s) => ({
+            clipId: `clip_${s.shotId}`,
+            stemPath: `audio/dialogue/${s.shotId}.wav`,
+            fromFrame: s.fromFrame,
+            durationInFrames: s.deliveryFrames,
+            speakerId: s.characterId,
+        })),
+        foleyClips: [],
+    }
 
-  const sequences = shots
-    .map((s, idx) => {
-      const compName = `Shot${(idx + 1).toString().padStart(2, '0')}CameraWrapper`;
-      const from = formatUnquotedLiteral(s.fromFrame);
-      const dur = formatUnquotedLiteral(s.deliveryFrames);
-      return `      <Sequence from={${from}} durationInFrames={${dur}}>\n        <${compName} />\n      </Sequence>`;
-    })
-    .join('\n');
+    const audioRigCode = generateMultiTrackAudioJsx(defaultAudioPlan)
+    const totalDur = formatUnquotedLiteral(totalFrames)
 
-  const defaultAudioPlan: MultiTrackAudioPlan = audioPlan || {
-    sceneId,
-    totalDurationFrames: totalFrames,
-    ambientBedPath: 'audio/ambiance/bunker_hum.wav',
-    ambientVolumeLinear: 0.35,
-    duckingFloorDb: -14.0,
-    dialogueClips: shots.map((s) => ({
-      clipId: `clip_${s.shotId}`,
-      stemPath: `audio/dialogue/${s.shotId}.wav`,
-      fromFrame: s.fromFrame,
-      durationInFrames: s.deliveryFrames,
-      speakerId: s.characterId,
-    })),
-    foleyClips: [],
-  };
-
-  const audioRigCode = generateMultiTrackAudioJsx(defaultAudioPlan);
-  const totalDur = formatUnquotedLiteral(totalFrames);
-
-  return `// @generated by packages/400.conductor/35.remotion.unit
+    return `// @generated by packages/400.conductor/35.remotion.unit
 // Static Source-Baked Master Composition
 // Zero dynamic runtime evaluation. Pure literal coordinates.
 import React from 'react';
@@ -114,205 +119,296 @@ export const RemotionRoot: React.FC = () => {
     />
   );
 };
-`.trimStart();
+`.trimStart()
 }
 
-export const initRemotion = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  cpy.totalCompositionsStamped = 0;
-  process.stdout.write('>> [REMOTION] [OK] packages/400.conductor/35.remotion.unit initialized cleanly.\n');
-  if (bal.slv) bal.slv({ remotionBit: { idx: 'init-remotion', val: 1 } });
-  return cpy;
-};
+export const initRemotion = (
+    cpy: RemotionModel,
+    bal: RemotionBit,
+    _ste: State,
+) => {
+    cpy.totalCompositionsStamped = 0
+    process.stdout.write(
+        '>> [REMOTION] [OK] packages/400.conductor/35.remotion.unit initialized cleanly.\n',
+    )
+    if (bal.slv) bal.slv({ remotionBit: { idx: 'init-remotion', val: 1 } })
+    return cpy
+}
 
-export const checkEjectLock = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [REMOTION]';
-  const targetPath = bal.src || bal.dat?.filePath;
+export const checkEjectLock = (
+    cpy: RemotionModel,
+    bal: RemotionBit,
+    _ste: State,
+) => {
+    const cns = '>> [REMOTION]'
+    const targetPath = bal.src || bal.dat?.filePath
 
-  if (!targetPath) {
-    const err = 'EJECT_CHECK_REJECTED: Missing filePath';
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ remotionBit: { idx: 'check-eject-lock-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  const status = inspectEjectLockHeader(targetPath);
-  cpy.isEjectLocked = status.isLocked;
-
-  if (status.isLocked) {
-    process.stdout.write(`${cns} [WARN] Eject lock active for ${path.basename(targetPath)}. Automated mutation blocked.\n`);
-  } else {
-    process.stdout.write(`${cns} [OK] File unlocked: ${path.basename(targetPath)} available for compilation.\n`);
-  }
-
-  if (bal.slv) {
-    bal.slv({
-      remotionBit: {
-        idx: 'check-eject-lock',
-        val: status.isLocked ? 1 : 0,
-        src: targetPath,
-        dat: status,
-      },
-    });
-  }
-
-  return cpy;
-};
-
-export const stampStaticComposition = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [METAPROGRAM]';
-  const sceneId = bal.src || bal.dat?.sceneId || 'ep01_sc01';
-  const outputTsxPath = bal.dat?.outputTsxPath || path.resolve(process.cwd(), process.cwd().endsWith('400.conductor') ? '' : 'packages/400.conductor', `drafts/Master_${sceneId}.tsx`);
-  const rawShots = bal.dat?.shots || [];
-  const kinematicsModes = bal.dat?.kinematicsModes;
-  const audioPlan = bal.dat?.audioPlan;
-
-  const ejectStatus = inspectEjectLockHeader(outputTsxPath);
-  if (ejectStatus.isLocked) {
-    const err = `EJECT_BUTTON_LOCKED: Cannot overwrite manually locked composition ${outputTsxPath}`;
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ remotionBit: { idx: 'stamp-static-composition-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  if (rawShots.length === 0) {
-    const err = `STAMP_REJECTED: Zero shots provided for scene ${sceneId}`;
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ remotionBit: { idx: 'stamp-static-composition-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  try {
-    const timedShots = computeCumulativeShotTimings(rawShots);
-    const totalFrames = timedShots.reduce((acc, s) => acc + s.deliveryFrames, 0);
-
-    const tsxCode = synthesizeStaticCompositionTsx(sceneId, totalFrames, timedShots, kinematicsModes, audioPlan);
-
-    const targetDir = path.dirname(outputTsxPath);
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+    if (!targetPath) {
+        const err = 'EJECT_CHECK_REJECTED: Missing filePath'
+        process.stderr.write(`${cns} [FAIL] ${err}\n`)
+        if (bal.slv)
+            return bal.slv({
+                remotionBit: {
+                    idx: 'check-eject-lock-error',
+                    val: 0,
+                    src: err,
+                },
+            })
+        throw new Error(err)
     }
 
-    const tmpPath = `${outputTsxPath}.tmp`;
-    fs.writeFileSync(tmpPath, tsxCode, 'utf8');
-    fs.renameSync(tmpPath, outputTsxPath);
+    const status = inspectEjectLockHeader(targetPath)
+    cpy.isEjectLocked = status.isLocked
 
-    cpy.totalCompositionsStamped += 1;
-    cpy.lastStampedPath = outputTsxPath;
-
-    process.stdout.write(
-      `${cns} [OK] Stamped static Remotion composition to ${outputTsxPath} (${totalFrames} frames across ${timedShots.length} shots with MultiTrack audio).\n`
-    );
+    if (status.isLocked) {
+        process.stdout.write(
+            `${cns} [WARN] Eject lock active for ${path.basename(targetPath)}. Automated mutation blocked.\n`,
+        )
+    } else {
+        process.stdout.write(
+            `${cns} [OK] File unlocked: ${path.basename(targetPath)} available for compilation.\n`,
+        )
+    }
 
     if (bal.slv) {
-      bal.slv({
-        remotionBit: {
-          idx: 'stamp-static-composition',
-          val: 1,
-          src: outputTsxPath,
-          dat: {
+        bal.slv({
+            remotionBit: {
+                idx: 'check-eject-lock',
+                val: status.isLocked ? 1 : 0,
+                src: targetPath,
+                dat: status,
+            },
+        })
+    }
+
+    return cpy
+}
+
+export const stampStaticComposition = (
+    cpy: RemotionModel,
+    bal: RemotionBit,
+    _ste: State,
+) => {
+    const cns = '>> [METAPROGRAM]'
+    const sceneId = bal.src || bal.dat?.sceneId || 'ep01_sc01'
+    const outputTsxPath =
+        bal.dat?.outputTsxPath ||
+        path.resolve(
+            process.cwd(),
+            process.cwd().endsWith('400.conductor')
+                ? ''
+                : 'packages/400.conductor',
+            `drafts/Master_${sceneId}.tsx`,
+        )
+    const rawShots = (bal.dat?.shots || []) as any[]
+    const kinematicsModes = bal.dat?.kinematicsModes
+    const audioPlan = bal.dat?.audioPlan
+
+    const ejectStatus = inspectEjectLockHeader(outputTsxPath)
+    if (ejectStatus.isLocked) {
+        const err = `EJECT_BUTTON_LOCKED: Cannot overwrite manually locked composition ${outputTsxPath}`
+        process.stderr.write(`${cns} [FAIL] ${err}\n`)
+        if (bal.slv)
+            return bal.slv({
+                remotionBit: {
+                    idx: 'stamp-static-composition-error',
+                    val: 0,
+                    src: err,
+                },
+            })
+        throw new Error(err)
+    }
+
+    if (rawShots.length === 0) {
+        const err = `STAMP_REJECTED: Zero shots provided for scene ${sceneId}`
+        process.stderr.write(`${cns} [FAIL] ${err}\n`)
+        if (bal.slv)
+            return bal.slv({
+                remotionBit: {
+                    idx: 'stamp-static-composition-error',
+                    val: 0,
+                    src: err,
+                },
+            })
+        throw new Error(err)
+    }
+
+    try {
+        const timedShots = computeCumulativeShotTimings(rawShots)
+        const totalFrames = timedShots.reduce(
+            (acc, s) => acc + s.deliveryFrames,
+            0,
+        )
+
+        const tsxCode = synthesizeStaticCompositionTsx(
             sceneId,
             totalFrames,
-            outputTsxPath,
-            shotCount: timedShots.length,
-          },
-        },
-      });
+            timedShots,
+            kinematicsModes,
+            audioPlan,
+        )
+
+        const targetDir = path.dirname(outputTsxPath)
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true })
+        }
+
+        const tmpPath = `${outputTsxPath}.tmp`
+        fs.writeFileSync(tmpPath, tsxCode, 'utf8')
+        fs.renameSync(tmpPath, outputTsxPath)
+
+        cpy.totalCompositionsStamped += 1
+        cpy.lastStampedPath = outputTsxPath
+
+        process.stdout.write(
+            `${cns} [OK] Stamped static Remotion composition to ${outputTsxPath} (${totalFrames} frames across ${timedShots.length} shots with MultiTrack audio).\n`,
+        )
+
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'stamp-static-composition',
+                    val: 1,
+                    src: outputTsxPath,
+                    dat: {
+                        sceneId,
+                        totalFrames,
+                        outputTsxPath,
+                        shotCount: timedShots.length,
+                    },
+                },
+            })
+        }
+    } catch (err: any) {
+        process.stderr.write(`${cns} [FAIL] Stamping failed: ${err.message}\n`)
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'stamp-static-composition-error',
+                    val: 0,
+                    src: err.message,
+                },
+            })
+        } else {
+            throw err
+        }
     }
-  } catch (err: any) {
-    process.stderr.write(`${cns} [FAIL] Stamping failed: ${err.message}\n`);
-    if (bal.slv) {
-      bal.slv({ remotionBit: { idx: 'stamp-static-composition-error', val: 0, src: err.message } });
-    } else {
-      throw err;
+
+    return cpy
+}
+
+export const mutateMeuAst = (
+    cpy: RemotionModel,
+    bal: RemotionBit,
+    _ste: State,
+) => {
+    const cns = '>> [MEU-SURGERY]'
+    const ticket = bal.dat as MeuRemediationTicket
+
+    if (
+        !ticket ||
+        !ticket.targetFile ||
+        !ticket.componentName ||
+        !ticket.propName
+    ) {
+        const err = 'MUTATE_REJECTED: Missing MeuRemediationTicket fields'
+        process.stderr.write(`${cns} [FAIL] ${err}\n`)
+        if (bal.slv)
+            return bal.slv({
+                remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err },
+            })
+        throw new Error(err)
     }
-  }
 
-  return cpy;
-};
-
-export const mutateMeuAst = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [MEU-SURGERY]';
-  const ticket = bal.dat as MeuRemediationTicket;
-
-  if (!ticket || !ticket.targetFile || !ticket.componentName || !ticket.propName) {
-    const err = 'MUTATE_REJECTED: Missing MeuRemediationTicket fields';
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  try {
-    const result = executeSurgicalMeuAstMutation(ticket);
-    if (bal.slv) {
-      bal.slv({
-        remotionBit: {
-          idx: 'mutate-meu-ast',
-          val: 1,
-          src: result.mutatedPath,
-          dat: result,
-        },
-      });
+    try {
+        const result = executeSurgicalMeuAstMutation(ticket)
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'mutate-meu-ast',
+                    val: 1,
+                    src: result.mutatedPath,
+                    dat: result,
+                },
+            })
+        }
+    } catch (err: any) {
+        process.stderr.write(`${cns} [FAIL] ${err.message}\n`)
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'mutate-meu-ast-error',
+                    val: 0,
+                    src: err.message,
+                },
+            })
+        } else {
+            throw err
+        }
     }
-  } catch (err: any) {
-    process.stderr.write(`${cns} [FAIL] ${err.message}\n`);
-    if (bal.slv) {
-      bal.slv({ remotionBit: { idx: 'mutate-meu-ast-error', val: 0, src: err.message } });
-    } else {
-      throw err;
+
+    return cpy
+}
+
+export const emitProvenanceLockfile = (
+    cpy: RemotionModel,
+    bal: RemotionBit,
+    _ste: State,
+) => {
+    const cns = '>> [PROVENANCE]'
+    const episodeId = bal.src || bal.dat?.episodeId || 'ep01'
+    const sceneId = bal.dat?.sceneId || 'sc01'
+    const metadata = bal.dat?.metadata ||
+        cpy.lastMetadata || {
+            episodeId,
+            sceneId,
+            fps: 24,
+            width: 1920,
+            height: 1080,
+            totalDurationFrames: 100,
+            outputTsxPath: cpy.lastStampedPath,
+            layers: [],
+            duckingTimeline: [],
+            opticalConfig: {
+                halationIntensityBps: 1500,
+                filmGrainOpacityBps: 2000,
+                colorLookupTable: 'lut.cube',
+                enableDespill: true,
+            },
+        }
+
+    try {
+        const result = generateUniversalProvenanceLockfile({
+            episodeId,
+            sceneId,
+            metadata,
+            canonMerkleRoot: bal.dat?.canonMerkleRoot,
+        })
+
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'emit-provenance-lockfile',
+                    val: 1,
+                    src: result.lockfilePath,
+                    dat: result,
+                },
+            })
+        }
+    } catch (err: any) {
+        process.stderr.write(`${cns} [FAIL] ${err.message}\n`)
+        if (bal.slv) {
+            bal.slv({
+                remotionBit: {
+                    idx: 'emit-provenance-lockfile-error',
+                    val: 0,
+                    src: err.message,
+                },
+            })
+        } else {
+            throw err
+        }
     }
-  }
 
-  return cpy;
-};
-
-export const emitProvenanceLockfile = (cpy: RemotionModel, bal: RemotionBit, _ste: State) => {
-  const cns = '>> [PROVENANCE]';
-  const episodeId = bal.src || bal.dat?.episodeId || 'ep01';
-  const sceneId = bal.dat?.sceneId || 'sc01';
-  const metadata = bal.dat?.metadata || cpy.lastMetadata || {
-    episodeId,
-    sceneId,
-    fps: 24,
-    width: 1920,
-    height: 1080,
-    totalDurationFrames: 100,
-    outputTsxPath: cpy.lastStampedPath,
-    layers: [],
-    duckingTimeline: [],
-    opticalConfig: {
-      halationIntensityBps: 1500,
-      filmGrainOpacityBps: 2000,
-      colorLookupTable: 'lut.cube',
-      enableDespill: true,
-    },
-  };
-
-  try {
-    const result = generateUniversalProvenanceLockfile({
-      episodeId,
-      sceneId,
-      metadata,
-      canonMerkleRoot: bal.dat?.canonMerkleRoot,
-    });
-
-    if (bal.slv) {
-      bal.slv({
-        remotionBit: {
-          idx: 'emit-provenance-lockfile',
-          val: 1,
-          src: result.lockfilePath,
-          dat: result,
-        },
-      });
-    }
-  } catch (err: any) {
-    process.stderr.write(`${cns} [FAIL] ${err.message}\n`);
-    if (bal.slv) {
-      bal.slv({ remotionBit: { idx: 'emit-provenance-lockfile-error', val: 0, src: err.message } });
-    } else {
-      throw err;
-    }
-  }
-
-  return cpy;
-};
+    return cpy
+}

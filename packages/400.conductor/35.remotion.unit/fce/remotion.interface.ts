@@ -1,6 +1,54 @@
 import { Model } from '../../99.core/interface/model.interface.js'
 import { SwangleRenderReceipt } from './renderOptions.interface.js'
 
+export interface CameraZoomTarget {
+    x: number
+    y: number
+    scaleStart?: number
+    scaleEnd?: number
+}
+
+export interface SceneShotPlan {
+    shotIndex: number
+    durationFrames: number
+    fromFrame: number
+    speakerId: string
+    dialogueText: string
+    audioWavPath: string
+    videoPlatePath: string
+    bgMattePath: string
+    cameraZoom?: CameraZoomTarget
+    trimEndFrames?: number
+}
+
+export interface StampCompositionOptions {
+    outputDirectory?: string
+    upstreamAstHash?: string
+    ambientLoopPath?: string
+}
+
+export interface StampCompositionReceipt {
+    ok: boolean
+    sceneId: string
+    destinationPath: string
+    totalFrames: number
+    shotCount: number
+    checksumSha256: string
+    wasClobberRefused: boolean
+    lifecycleStatus: 'generated' | 'candidate'
+    t0Spend: '$0.00'
+    error?: string
+}
+
+export interface RemotionState extends Model {
+    idx: string
+    status: string
+    lastStampedSceneId: string | null
+    lastStampedFilePath: string | null
+    lastChecksumSha256: string | null
+    lastActionTimestamp: number
+}
+
 export type LayerType =
     | 'ENVIRONMENT_MATTE'
     | 'ATMOSPHERE_VECTOR'
@@ -84,7 +132,7 @@ export interface MeuRemediationTicket {
     componentName: string
     propName: string
     newValue: string | number
-    cycleCount: number // 1, 2, or 3
+    cycleCount: number
     reason: string
 }
 
@@ -110,10 +158,10 @@ export interface UniversalProvenanceManifest {
         nodeVersion: string
         remotionVersion: string
     }
-    assetDigests: Record<string, string> // relativePath -> SHA-256
+    assetDigests: Record<string, string>
 }
 
-export default interface Remotion extends Model {
+export default interface Remotion extends RemotionState {
     idx: string
     totalCompositionsStamped: number
     lastStampedPath: string
@@ -122,5 +170,4 @@ export default interface Remotion extends Model {
     lastMetadata: CompositionMetadata | null
     activeDossiers: Record<string, StoryArchitectDossier>
     lastRenderReceipt?: SwangleRenderReceipt | null
-    lastActionTimestamp?: number
 }

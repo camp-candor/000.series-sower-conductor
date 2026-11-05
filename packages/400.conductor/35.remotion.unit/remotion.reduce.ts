@@ -9,19 +9,31 @@ export function reducer(
     act: Act.Actions,
     state?: State,
 ) {
+    const cpy = clone(model)
     switch (act.type) {
         case Act.INIT_REMOTION:
-            return Buzz.initRemotion(clone(model), act.bale, state!)
-        case Act.CHECK_EJECT_LOCK:
-            return Buzz.checkEjectLock(clone(model), act.bale, state!)
+            return Buzz.initRemotion(cpy, act.bale, state!)
+        case Act.UPDATE_REMOTION:
+            return Buzz.updateRemotion(cpy, act.bale, state!)
         case Act.STAMP_STATIC_COMPOSITION:
-            return Buzz.stampStaticComposition(clone(model), act.bale, state!)
+            if (
+                act.bale.dat?.outputTsxPath ||
+                act.bale.dat?.metadata ||
+                (act.bale.dat?.shots &&
+                    (act.bale.dat.shots[0] as any)?.shotId &&
+                    !act.bale.dat.shots[0]?.speakerId)
+            ) {
+                return Buzz.stampStaticCompositionLegacy(cpy, act.bale, state!)
+            }
+            return Buzz.stampStaticCompositionBuzz(cpy, act.bale, state!)
         case Act.MUTATE_MEU_AST:
-            return Buzz.mutateMeuAst(clone(model), act.bale, state!)
+            return Buzz.mutateMeuAst(cpy, act.bale, state!)
+        case Act.CHECK_EJECT_LOCK:
+            return Buzz.checkEjectLock(cpy, act.bale, state!)
         case Act.EMIT_PROVENANCE_LOCKFILE:
-            return Buzz.emitProvenanceLockfile(clone(model), act.bale, state!)
+            return Buzz.emitProvenanceLockfile(cpy, act.bale, state!)
         case Act.RENDER_SWANGLE:
-            return Buzz.renderSwangle(clone(model), act.bale, state!)
+            return Buzz.renderSwangle(cpy, act.bale, state!)
         default:
             return model
     }
