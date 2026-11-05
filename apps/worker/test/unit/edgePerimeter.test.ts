@@ -94,6 +94,40 @@ describe('apps/worker Cloudflare Edge Shell Ingress Perimeter', () => {
         expect(data.error.t0Spend).toBe('$0.00')
     })
 
+    it('detects unratified dirty scene dependencies and rejects with HTTP 412 Precondition Failed', async () => {
+        const mockDb = {
+            prepare: () => ({
+                bind: () => ({
+                    first: async () => ({ dirty_count: 3 }),
+                }),
+            }),
+        }
+        const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+        const payload = btoa(
+            JSON.stringify({
+                sub: 'conductor_01',
+                role: 'conductor',
+                exp: Math.floor(Date.now() / 1000) + 3600,
+            }),
+        )
+        const validJwt = `${header}.${payload}.${btoa('mock_sig')}`
+
+        const res = await app.request(
+            '/staleness/ep01_sc01',
+            {
+                headers: { Authorization: `Bearer ${validJwt}` },
+            },
+            { CANON_DB: mockDb as any },
+        )
+
+        expect(res.status).toBe(412)
+        const data = (await res.json()) as any
+        expect(data.ok).toBe(false)
+        expect(data.error.code).toBe('DIRTY_SCENE_REJECTED')
+        expect(data.error.dirtyCount).toBe(3)
+        expect(data.error.t0Spend).toBe('$0.00')
+    })
+
     it('traps command injection payloads and rejects with HTTP 403 Forbidden', async () => {
         const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
         const payload = btoa(
