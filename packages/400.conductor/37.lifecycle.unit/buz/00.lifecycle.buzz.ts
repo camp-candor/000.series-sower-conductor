@@ -7,6 +7,9 @@ import { verifyCanonMerkleLock } from './canonLock.buzz.js'
 import { computeCumulativeTimeline } from './frameQuantizer.buzz.js'
 import { calculateMultiWindowDuckingCurve } from './audioDucking.buzz.js'
 import { conformToDiffusionLattice } from './latticeExpansion.buzz.js'
+import { mintProvenanceManifest } from './lockfileMinting.buzz.js'
+import { emitWormSnapshots } from './wormSnapshot.buzz.js'
+import { dispatchSettlementReceipt } from './settlementDispatch.buzz.js'
 import { PreflightReport } from '../fce/lifecycle.interface.js'
 
 export const initLifecycle = async (
@@ -109,10 +112,7 @@ export const quantizeAcousticClockBuzz = async (
                 idx: 'quantize-acoustic-clock',
                 val: 1,
                 src: 'QUANTIZED',
-                dat: {
-                    sceneId,
-                    timeline,
-                },
+                dat: { sceneId, timeline },
             },
         })
     }
@@ -140,6 +140,48 @@ export const conformDiffusionLatticeBuzz = async (
                 val: 1,
                 src: 'LATTICE_CONFORMED',
                 dat: { latticeAllocation },
+            },
+        })
+    }
+
+    return cpy
+}
+
+export const sealProvenanceLedgerBuzz = async (
+    cpy: LifecycleModel,
+    bal: LifecycleBit,
+    _ste: State,
+) => {
+    const sceneId =
+        bal.dat?.sceneId || bal.src || cpy.activeSceneId || 'ep01_sc01'
+    const episodeId = bal.dat?.episodeId || 'ep01'
+    const assetPaths = bal.dat?.assetPaths || []
+
+    // 1. Mint Universal Provenance Manifest & compute lockfileSha256
+    const manifest = await mintProvenanceManifest(
+        sceneId,
+        episodeId,
+        assetPaths,
+    )
+
+    // 2. Emit Dual WORM Snapshots
+    const wormReceipt = await emitWormSnapshots(sceneId, manifest)
+
+    // 3. Dispatch Relational Settlement to Edge
+    const settlementReceipt = await dispatchSettlementReceipt(manifest)
+
+    cpy.lastProvenanceManifest = manifest
+    cpy.lastSettlementReceipt = settlementReceipt
+    cpy.stage = settlementReceipt.ok ? 'PASSED_PREFLIGHT' : 'STAGE_FAILED_DIRTY'
+    cpy.lastActionTimestamp = Date.now()
+
+    if (bal.slv) {
+        bal.slv({
+            lifecycleBit: {
+                idx: 'seal-provenance-ledger',
+                val: settlementReceipt.ok && wormReceipt.ok ? 1 : 0,
+                src: manifest.lockfileSha256 || 'SEALED',
+                dat: { manifest, wormReceipt, settlementReceipt },
             },
         })
     }

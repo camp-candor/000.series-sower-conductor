@@ -21,6 +21,8 @@ export function reducer(
             return Buzz.quantizeAcousticClockBuzz(cpy, act.bale, state!)
         case Act.CONFORM_DIFFUSION_LATTICE:
             return Buzz.conformDiffusionLatticeBuzz(cpy, act.bale, state!)
+        case Act.SEAL_PROVENANCE_LEDGER:
+            return Buzz.sealProvenanceLedgerBuzz(cpy, act.bale, state!)
         default:
             return model
     }

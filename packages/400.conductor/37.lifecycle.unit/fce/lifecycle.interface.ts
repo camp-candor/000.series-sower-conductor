@@ -7,6 +7,7 @@ export type LifecycleStage =
     | 'STAGE_FAILED_SOMATIC'
     | 'STAGE_FAILED_CANON_DRIFT'
     | 'PASSED_PREFLIGHT'
+    | 'STAGE_PROVENANCE_SEALED'
 
 export interface CharacterSomaticProfile {
     characterId: string

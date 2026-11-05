@@ -34,9 +34,17 @@ export class ConformDiffusionLattice implements Action {
     constructor(public bale: LifecycleBit) {}
 }
 
+export const SEAL_PROVENANCE_LEDGER =
+    '[Lifecycle action] Seal Provenance Ledger'
+export class SealProvenanceLedger implements Action {
+    readonly type = SEAL_PROVENANCE_LEDGER
+    constructor(public bale: LifecycleBit) {}
+}
+
 export type Actions =
     | InitLifecycle
     | UpdateLifecycle
     | RunInceptionPreflight
     | QuantizeAcousticClock
     | ConformDiffusionLattice
+    | SealProvenanceLedger

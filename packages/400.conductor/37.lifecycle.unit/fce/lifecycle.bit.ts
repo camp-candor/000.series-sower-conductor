@@ -7,6 +7,11 @@ import {
     LatticeAllocationResult,
     SawtoothWasteReport,
 } from './lattice.interface.js'
+import {
+    UniversalProvenanceManifest,
+    WormEmissionReceipt,
+    SettlementDispatchReceipt,
+} from './provenance.interface.js'
 
 export default interface LifecycleBit {
     idx: string
@@ -14,6 +19,7 @@ export default interface LifecycleBit {
     val?: number
     dat?: {
         sceneId?: string
+        episodeId?: string
         sqliteDb?: any
         cast?: CharacterSomaticProfile[]
         requiredVerbs?: Record<string, string[]>
@@ -27,6 +33,11 @@ export default interface LifecycleBit {
         targetFrames?: number
         latticeAllocation?: LatticeAllocationResult
         wasteReport?: SawtoothWasteReport
+        assetPaths?: string[]
+        provenanceManifest?: UniversalProvenanceManifest
+        wormReceipt?: WormEmissionReceipt
+        settlementReceipt?: SettlementDispatchReceipt
+        [key: string]: any
     }
     slv?: Function
 }
