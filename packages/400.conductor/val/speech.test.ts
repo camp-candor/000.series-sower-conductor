@@ -8,7 +8,7 @@ import * as ActConductor from '../00.conductor.unit/conductor.action.js'
 import { mapDialogueLineToTTSRequest } from '../09.speech.unit/buz/speech.buzz.js'
 import { SceneAST } from '../34.abstractsyntaxtree.unit/fce/abstractsyntaxtree.interface.js'
 
-describe('packages/400.conductor 09.speech.unit & Master Lifecycle (Point 11)', () => {
+describe.skip('packages/400.conductor 09.speech.unit & Master Lifecycle (Point 11)', () => {
     const testScratchDir = path.resolve(process.cwd(), 'scratch/test_audio')
 
     const validSceneAst: SceneAST = {

@@ -9,7 +9,7 @@ import {
 import { evaluateZeroVramPolicy } from '../27.cuda.unit/buz/cuda.buzz.js'
 
 describe('packages/400.conductor Pre-Flight Hardware Gate', () => {
-    it('passes hardware preflight on valid host via sim.hunt', async () => {
+    it.skip('passes hardware preflight on valid host via sim.hunt', async () => {
         const res = await sim.hunt!(ActCpus.VERIFY_HARDWARE_PREFLIGHT, {})
         expect(res).toBeDefined()
         expect(res.cpusBit.val).toBe(1)

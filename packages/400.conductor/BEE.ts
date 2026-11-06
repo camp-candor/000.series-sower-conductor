@@ -1,3 +1,4 @@
+import { SpeechModel } from './09.speech.unit/speech.model.js'
 import ConductorUnit from './00.conductor.unit/conductor.unit.js'
 import LogisticUnit from './04.logistic.unit/logistic.unit.js'
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js'
@@ -95,7 +96,7 @@ export default class UnitData implements Model {
   conductor: any;
   logistic: any;
   sqlite: any;
-  speech: any;
+  speech: any = new SpeechModel();
   somaticdsp: Somaticdsp = new SomaticdspModel();
   ledger: any;
   frame: any;
