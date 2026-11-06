@@ -1,249 +1,289 @@
-import { MenuModel } from '../menu.model.js';
-import MenuBit from '../fce/menu.bit.js';
-import State from '../../99.core/state.js';
-import * as ActMnu from '../menu.action.js';
+import { MenuModel } from '../menu.model.js'
+import MenuBit from '../fce/menu.bit.js'
+import State from '../../99.core/state.js'
+import * as ActMnu from '../menu.action.js'
 import {
-  sanitizeTo7BitAscii,
-  formatTelemetryLine,
-  streamConsoleTelemetry,
-} from './telemetryStreamer.buzz.js';
+    sanitizeTo7BitAscii,
+    formatTelemetryLine,
+    streamConsoleTelemetry,
+} from './telemetryStreamer.buzz.js'
 
-export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 };
-export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 };
+export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
+export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
 
 export const CONDUCTOR_MENU_CHOICES = [
-  {
-    id: 'CHOICE_AST_AUDIT',
-    label: 'AUDIT DIALOGUE AST CONTRACT',
-    tooltip: 'Validate drafts/dialogue_ast.json against strict Zod schema at T0 ($0.00).',
-    actionType: '[Abstractsyntaxtree action] Parse Scene AST',
-  },
-  {
-    id: 'CHOICE_SOMATIC_DSP',
-    label: 'INSPECT CHARACTER SOMATIC DSP',
-    tooltip: 'Convert physical fatigue and trauma metrics into continuous DSP modifiers.',
-    actionType: '[Somaticdsp action] Translate Somatic DSP',
-  },
-  {
-    id: 'CHOICE_SPEECH_SYNTH',
-    label: 'SYNTHESIZE SCENE AUDIO STEMS',
-    tooltip: 'Spawn ephemeral Python synthesize.py with Zero-VRAM invariant on Rig 1.',
-    actionType: '[Speech action] Execute Scene Speech',
-  },
-  {
-    id: 'CHOICE_FRAME_QUANT',
-    label: 'QUANTIZE ACOUSTIC MASTER CLOCK',
-    tooltip: 'Quantize continuous WAV duration to 24 fps integer frames with zero drift.',
-    actionType: '[Frame action] Quantize Acoustic Clock',
-  },
-  {
-    id: 'CHOICE_EXPOSURE_SHEET',
-    label: 'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
-    tooltip: 'Calculate -14dB sidechain ducking curve and commit drafts/exposure_sheet.json.',
-    actionType: '[Audio action] Assemble Acoustic Exposure Sheet',
-  },
-  {
-    id: 'CHOICE_REMOTE_AUDIO_PIVOT',
-    label: 'DISPATCH REMOTE AUDIO PIVOT',
-    tooltip: 'Programmatically trigger 000.audio-microservice via shared global pivot bus.',
-    actionType: '[Menu action] Dispatch Remote Audio Pivot',
-  },
-  {
-    id: 'CHOICE_ROOT_RETURN',
-    label: 'ROOT MENU',
-    tooltip: 'Exit Conductor flight deck and return to 995.library root cockpit.',
-    actionType: '[Menu action] Root Menu',
-  },
-];
+    {
+        id: 'CHOICE_AST_AUDIT',
+        label: 'AUDIT DIALOGUE AST CONTRACT',
+        tooltip:
+            'Validate drafts/dialogue_ast.json against strict Zod schema at T0 ($0.00).',
+        actionType: '[Abstractsyntaxtree action] Parse Scene AST',
+    },
+    {
+        id: 'CHOICE_SOMATIC_DSP',
+        label: 'INSPECT CHARACTER SOMATIC DSP',
+        tooltip:
+            'Convert physical fatigue and trauma metrics into continuous DSP modifiers.',
+        actionType: '[Somaticdsp action] Translate Somatic DSP',
+    },
+    {
+        id: 'CHOICE_SPEECH_SYNTH',
+        label: 'SYNTHESIZE SCENE AUDIO STEMS',
+        tooltip:
+            'Spawn ephemeral Python synthesize.py with Zero-VRAM invariant on Rig 1.',
+        actionType: '[Speech action] Execute Scene Speech',
+    },
+    {
+        id: 'CHOICE_FRAME_QUANT',
+        label: 'QUANTIZE ACOUSTIC MASTER CLOCK',
+        tooltip:
+            'Quantize continuous WAV duration to 24 fps integer frames with zero drift.',
+        actionType: '[Frame action] Quantize Acoustic Clock',
+    },
+    {
+        id: 'CHOICE_EXPOSURE_SHEET',
+        label: 'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
+        tooltip:
+            'Calculate -14dB sidechain ducking curve and commit drafts/exposure_sheet.json.',
+        actionType: '[Audio action] Assemble Acoustic Exposure Sheet',
+    },
+    {
+        id: 'CHOICE_REMOTE_AUDIO_PIVOT',
+        label: 'DISPATCH REMOTE AUDIO PIVOT',
+        tooltip:
+            'Programmatically trigger 000.audio-microservice via shared global pivot bus.',
+        actionType: '[Menu action] Dispatch Remote Audio Pivot',
+    },
+    {
+        id: 'CHOICE_ROOT_RETURN',
+        label: 'ROOT MENU',
+        tooltip:
+            'Exit Conductor flight deck and return to 995.library root cockpit.',
+        actionType: '[Menu action] Root Menu',
+    },
+]
 
 export const initMenu = (cpy: MenuModel, bal: MenuBit, ste: State) => {
-  cpy.gridLeft = CONDUCTOR_GRID_LEFT;
-  cpy.gridRight = CONDUCTOR_GRID_RIGHT;
-  cpy.menuChoices = CONDUCTOR_MENU_CHOICES;
-  if (bal.slv != null) bal.slv({ mnuBit: { idx: 'init-menu', val: 1 } });
-  return cpy;
-};
+    cpy.gridLeft = CONDUCTOR_GRID_LEFT
+    cpy.gridRight = CONDUCTOR_GRID_RIGHT
+    cpy.menuChoices = CONDUCTOR_MENU_CHOICES
+    const bit = { idx: 'init-menu', val: 1 }
+    if (bal.slv != null) bal.slv({ mnuBit: bit, menuBit: bit })
+    return cpy
+}
 
 export const dispatchRemoteAudioPivot = async (
-  cpy: MenuModel,
-  bal: MenuBit,
-  ste: State,
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste: State,
 ): Promise<MenuModel> => {
-  const pivot = (global as any).MICROSERVICEAUDIO || (global as any).PIVOTS?.['microserviceaudio'];
-  if (!pivot) {
-    const warnMsg = formatTelemetryLine(
-      'AUDIO-MICROSERVICE',
-      'Remote pivot [microserviceaudio] not found in global registry.',
-      'WARN',
-    );
-    await streamConsoleTelemetry(warnMsg);
-    if (bal.slv != null) bal.slv({ mnuBit: { idx: 'dispatch-remote-audio-pivot-warn' } });
-    return cpy;
-  }
+    const pivot =
+        (global as any).MICROSERVICEAUDIO ||
+        (global as any).PIVOTS?.['microserviceaudio']
+    if (!pivot) {
+        const warnMsg = formatTelemetryLine(
+            'AUDIO-MICROSERVICE',
+            'Remote pivot [microserviceaudio] not found in global registry.',
+            'WARN',
+        )
+        await streamConsoleTelemetry(warnMsg)
+        if (bal.slv != null)
+            bal.slv({ mnuBit: { idx: 'dispatch-remote-audio-pivot-warn' } })
+        return cpy
+    }
 
-  await streamConsoleTelemetry(
-    formatTelemetryLine('AUDIO-MICROSERVICE', 'Triggering remote pivot health action via hunt...'),
-  );
-
-  try {
-    const response = await pivot.hunt('[Microserviceaudio action] Update Microserviceaudio', {
-      content: 'Remote Conductor Handshake',
-    });
     await streamConsoleTelemetry(
-      formatTelemetryLine('AUDIO-MICROSERVICE', 'Remote pivot answered successfully.', 'OK'),
-    );
-    if (bal.slv != null) {
-      bal.slv({
-        mnuBit: {
-          idx: 'dispatch-remote-audio-pivot-success',
-          dat: { remotePivotResponse: response },
-        },
-      });
-    }
-  } catch (err: any) {
-    const errMsg = formatTelemetryLine(
-      'AUDIO-MICROSERVICE',
-      `Remote pivot invocation faulted: ${err.message}`,
-      'FAIL',
-    );
-    await streamConsoleTelemetry(errMsg);
-    if (bal.slv != null) bal.slv({ mnuBit: { idx: 'dispatch-remote-audio-pivot-error' } });
-  }
+        formatTelemetryLine(
+            'AUDIO-MICROSERVICE',
+            'Triggering remote pivot health action via hunt...',
+        ),
+    )
 
-  return cpy;
-};
-
-export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State): Promise<MenuModel> => {
-  if (!global.LIBRARY) {
-    // Headless degradation
-    if (bal.slv != null) bal.slv({ mnuBit: { idx: 'update-menu-headless' } });
-    return cpy;
-  }
-
-  const lst = CONDUCTOR_MENU_CHOICES.map((c) => c.label);
-
-  const gridBit = await global.LIBRARY.hunt('[Grid action] Update Grid', {
-    x: CONDUCTOR_GRID_LEFT.x,
-    y: CONDUCTOR_GRID_LEFT.y,
-    xSpan: CONDUCTOR_GRID_LEFT.xSpan,
-    ySpan: CONDUCTOR_GRID_LEFT.ySpan,
-  });
-
-  const choiceBit = await global.LIBRARY.hunt('[Choice action] Open Choice', {
-    dat: { clr0: 0, clr1: 3 }, // Black on Yellow / Green
-    src: 'VERTICAL',
-    lst,
-    net: gridBit?.grdBit?.dat,
-    cb: async (focusedIndex: number) => {
-      const choice = CONDUCTOR_MENU_CHOICES[focusedIndex];
-      if (choice) {
-        await streamConsoleTelemetry(`>> [TOOLTIP] ${choice.tooltip}`);
-      }
-    },
-  });
-
-  const selectedLabel = choiceBit?.chcBit?.src;
-  const matchedChoice = CONDUCTOR_MENU_CHOICES.find((c) => c.label === selectedLabel);
-
-  if (matchedChoice) {
-    cpy.activeSelection = matchedChoice.id;
-    cpy.lastActionTimestamp = Date.now();
-
-    switch (matchedChoice.id) {
-      case 'CHOICE_AST_AUDIT':
-        await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
-          dat: { filePath: './drafts/dialogue_ast.json' },
-        });
-        break;
-
-      case 'CHOICE_SOMATIC_DSP':
-        await ste.hunt('[Somaticdsp action] Translate Somatic DSP', {
-          dat: {
-            somaticState: {
-              character_id: 'char_bog',
-              fatigue_bps: 8200,
-              pain_bps: 4500,
-              refusal_strain_bps: 1200,
-              is_conscious: true,
-              active_conditions: [],
-              banned_kinetic_verbs: [],
+    try {
+        const response = await pivot.hunt(
+            '[Microserviceaudio action] Update Microserviceaudio',
+            {
+                content: 'Remote Conductor Handshake',
             },
-            somaticInput: {
-              character_id: 'char_bog',
-              base_pitch_shift_semitones: -1.0,
-            },
-          },
-        });
-        break;
-
-      case 'CHOICE_SPEECH_SYNTH':
-        await ste.hunt('[Speech action] Execute Scene Speech', {
-          dat: {
-            request: {
-              series_id: 'under-the-floorboards',
-              scene_id: 'ep01_sc01',
-              engine: 'styletts2',
-              items: [
-                {
-                  line_id: 'line_001',
-                  speaker_id: 'char_elias',
-                  dialogue_text: 'The intake valve is rusted through.',
-                  emotion_tag: 'tense_jaw',
+        )
+        await streamConsoleTelemetry(
+            formatTelemetryLine(
+                'AUDIO-MICROSERVICE',
+                'Remote pivot answered successfully.',
+                'OK',
+            ),
+        )
+        if (bal.slv != null) {
+            bal.slv({
+                mnuBit: {
+                    idx: 'dispatch-remote-audio-pivot-success',
+                    dat: { remotePivotResponse: response },
                 },
-              ],
-            },
-          },
-        });
-        break;
-
-      case 'CHOICE_FRAME_QUANT':
-        await ste.hunt('[Frame action] Quantize Acoustic Clock', {
-          dat: {
-            stems: [
-              { shot_id: 'sh01', duration_ms: 3120 },
-              { shot_id: 'sh02', duration_ms: 1840 },
-            ],
-          },
-        });
-        break;
-
-      case 'CHOICE_EXPOSURE_SHEET':
-        await ste.hunt('[Audio action] Assemble Acoustic Exposure Sheet', {
-          dat: {
-            scene_id: 'ep01_sc01',
-            series_id: 'under-the-floorboards',
-            dialogue_windows: [
-              {
-                shot_id: 'sh01',
-                from_frame: 0,
-                to_frame: 74,
-                stem_path: 'public/audio/dialogue/sh01.wav',
-                speaker_id: 'char_bog',
-              },
-            ],
-            foley_cues: [],
-          },
-        });
-        break;
-
-      case 'CHOICE_REMOTE_AUDIO_PIVOT':
-        await dispatchRemoteAudioPivot(cpy, bal, ste);
-        break;
-
-      case 'CHOICE_ROOT_RETURN':
-        if (bal.slv != null) bal.slv({ mnuBit: { idx: 'root-menu' } });
-        return cpy;
-
-      default:
-        break;
+            })
+        }
+    } catch (err: any) {
+        const errMsg = formatTelemetryLine(
+            'AUDIO-MICROSERVICE',
+            `Remote pivot invocation faulted: ${err.message}`,
+            'FAIL',
+        )
+        await streamConsoleTelemetry(errMsg)
+        if (bal.slv != null)
+            bal.slv({ mnuBit: { idx: 'dispatch-remote-audio-pivot-error' } })
     }
-  }
 
-  // Non-recursive re-entrant loop tick
-  setTimeout(async () => {
-    await ste.hunt(ActMnu.UPDATE_MENU, {});
-  }, 333);
+    return cpy
+}
 
-  return cpy;
-};
+export const updateMenu = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste: State,
+): Promise<MenuModel> => {
+    if (!global.LIBRARY) {
+        // Headless degradation
+        const lst = (cpy.menuChoices || CONDUCTOR_MENU_CHOICES).map(
+            (c) => c.label,
+        )
+        const bit = {
+            idx: 'update-menu-headless',
+            val: 1,
+            src: bal?.src || '',
+            lst,
+        }
+        if (bal.slv != null) bal.slv({ mnuBit: bit, menuBit: bit })
+        return cpy
+    }
 
+    const lst = CONDUCTOR_MENU_CHOICES.map((c) => c.label)
+
+    const gridBit = await global.LIBRARY.hunt('[Grid action] Update Grid', {
+        x: CONDUCTOR_GRID_LEFT.x,
+        y: CONDUCTOR_GRID_LEFT.y,
+        xSpan: CONDUCTOR_GRID_LEFT.xSpan,
+        ySpan: CONDUCTOR_GRID_LEFT.ySpan,
+    })
+
+    const choiceBit = await global.LIBRARY.hunt('[Choice action] Open Choice', {
+        dat: { clr0: 0, clr1: 3 }, // Black on Yellow / Green
+        src: 'VERTICAL',
+        lst,
+        net: gridBit?.grdBit?.dat,
+        cb: async (focusedIndex: number) => {
+            const choice = CONDUCTOR_MENU_CHOICES[focusedIndex]
+            if (choice) {
+                await streamConsoleTelemetry(`>> [TOOLTIP] ${choice.tooltip}`)
+            }
+        },
+    })
+
+    const selectedLabel = choiceBit?.chcBit?.src
+    const matchedChoice = CONDUCTOR_MENU_CHOICES.find(
+        (c) => c.label === selectedLabel,
+    )
+
+    if (matchedChoice) {
+        cpy.activeSelection = matchedChoice.id
+        cpy.lastActionTimestamp = Date.now()
+
+        switch (matchedChoice.id) {
+            case 'CHOICE_AST_AUDIT':
+                await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
+                    dat: { filePath: './drafts/dialogue_ast.json' },
+                })
+                break
+
+            case 'CHOICE_SOMATIC_DSP':
+                await ste.hunt('[Somaticdsp action] Translate Somatic DSP', {
+                    dat: {
+                        somaticState: {
+                            character_id: 'char_bog',
+                            fatigue_bps: 8200,
+                            pain_bps: 4500,
+                            refusal_strain_bps: 1200,
+                            is_conscious: true,
+                            active_conditions: [],
+                            banned_kinetic_verbs: [],
+                        },
+                        somaticInput: {
+                            character_id: 'char_bog',
+                            base_pitch_shift_semitones: -1.0,
+                        },
+                    },
+                })
+                break
+
+            case 'CHOICE_SPEECH_SYNTH':
+                await ste.hunt('[Speech action] Execute Scene Speech', {
+                    dat: {
+                        request: {
+                            series_id: 'under-the-floorboards',
+                            scene_id: 'ep01_sc01',
+                            engine: 'styletts2',
+                            items: [
+                                {
+                                    line_id: 'line_001',
+                                    speaker_id: 'char_elias',
+                                    dialogue_text:
+                                        'The intake valve is rusted through.',
+                                    emotion_tag: 'tense_jaw',
+                                },
+                            ],
+                        },
+                    },
+                })
+                break
+
+            case 'CHOICE_FRAME_QUANT':
+                await ste.hunt('[Frame action] Quantize Acoustic Clock', {
+                    dat: {
+                        stems: [
+                            { shot_id: 'sh01', duration_ms: 3120 },
+                            { shot_id: 'sh02', duration_ms: 1840 },
+                        ],
+                    },
+                })
+                break
+
+            case 'CHOICE_EXPOSURE_SHEET':
+                await ste.hunt(
+                    '[Audio action] Assemble Acoustic Exposure Sheet',
+                    {
+                        dat: {
+                            scene_id: 'ep01_sc01',
+                            series_id: 'under-the-floorboards',
+                            dialogue_windows: [
+                                {
+                                    shot_id: 'sh01',
+                                    from_frame: 0,
+                                    to_frame: 74,
+                                    stem_path: 'public/audio/dialogue/sh01.wav',
+                                    speaker_id: 'char_bog',
+                                },
+                            ],
+                            foley_cues: [],
+                        },
+                    },
+                )
+                break
+
+            case 'CHOICE_REMOTE_AUDIO_PIVOT':
+                await dispatchRemoteAudioPivot(cpy, bal, ste)
+                break
+
+            case 'CHOICE_ROOT_RETURN':
+                if (bal.slv != null) bal.slv({ mnuBit: { idx: 'root-menu' } })
+                return cpy
+
+            default:
+                break
+        }
+    }
+
+    // Non-recursive re-entrant loop tick
+    setTimeout(async () => {
+        await ste.hunt(ActMnu.UPDATE_MENU, {})
+    }, 333)
+
+    return cpy
+}

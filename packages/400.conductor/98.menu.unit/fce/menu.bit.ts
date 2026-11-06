@@ -1,14 +1,14 @@
-import { MenuChoiceItem, CockpitTelemetryPacket } from './menu.interface.js';
+import { MenuChoiceItem, CockpitTelemetryPacket } from './menu.interface.js'
 
 export default interface MenuBit {
-  idx: string;
-  src?: string;
-  val?: number;
-  lst?: string[];
-  dat?: {
-    choice?: MenuChoiceItem;
-    telemetry?: CockpitTelemetryPacket;
-    remotePivotResponse?: any;
-  };
-  slv?: Function;
+    idx: string
+    src?: string
+    val?: number
+    lst?: string[]
+    dat?: {
+        choice?: MenuChoiceItem
+        telemetry?: CockpitTelemetryPacket
+        remotePivotResponse?: any
+    }
+    slv?: Function
 }

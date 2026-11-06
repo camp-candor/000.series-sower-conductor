@@ -292,7 +292,8 @@ const init = async () => {
             args.includes('400.conductor') ||
             process.env.TARGET_PACKAGE === '400.conductor' ||
             idx === 'conductor' ||
-            idx === '400.conductor'
+            idx === '400.conductor' ||
+            (!idx && getRootIdentity().name.includes('conductor'))
 
         if (isConductorTarget) {
             try {
