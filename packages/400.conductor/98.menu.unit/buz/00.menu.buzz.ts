@@ -31,6 +31,8 @@ const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         '>> [TOOLTIP] Validate closed Zod schema and 7-bit clean ASCII parity against drafts/dialogue_ast.json ($T_0 = $0.00).',
     'INSPECT CHARACTER SOMATIC DSP':
         '>> [TOOLTIP] Convert physical fatigue and trauma metrics into continuous DSP modifiers.',
+    'SYNTHESIZE SCENE AUDIO STEMS':
+        '>> [TOOLTIP] Spawn ephemeral Python synthesize.py with Zero-VRAM invariant on Rig 1.',
     'SEAL UNIVERSAL PROVENANCE LOCKFILE':
         '>> [TOOLTIP] Mint RFC 8785 canonical lockfile and emit dual WORM snapshots to vault/snapshots/ directory.',
     'VERIFY RIG 1 HARDWARE ZERO-VRAM':
@@ -110,6 +112,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'AUDIT REMOTION COMPOSITION AST',
         'AUDIT DIALOGUE AST CONTRACT',
         'INSPECT CHARACTER SOMATIC DSP',
+        'SYNTHESIZE SCENE AUDIO STEMS',
         'SEAL UNIVERSAL PROVENANCE LOCKFILE',
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
         'INSPECT SQLITE CONTINUITY LEDGER',
@@ -169,7 +172,6 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
 
     // [Task 7.1.2] Interactive Choice Action Switchboard Dispatcher
     switch (selection) {
-
         case 'SYNTHESIZE SCENE AUDIO STEMS':
             const bit = await ste.hunt('[Speech action] Execute Scene Speech', {
                 dat: {
@@ -182,21 +184,22 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
                             {
                                 line_id: 'line_001',
                                 speaker_id: 'char_elias',
-                                dialogue_text: 'The intake valve is rusted through.',
+                                dialogue_text:
+                                    'The intake valve is rusted through.',
                                 emotion_tag: 'tense_jaw',
                                 tonePacing: 1.0,
                             },
                         ],
                     },
                 },
-            });
+            })
             if (bit?.spcBit?.dat?.receipt?.ok) {
                 await global.LIBRARY.hunt('[Console action] Update Console', {
                     idx: 'cns00',
                     src: '>> [MENU:SPEECH] Speech generation finished successfully.',
-                });
+                })
             }
-            break;
+            break
 
         case 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)': {
             await cns(
