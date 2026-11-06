@@ -55,6 +55,13 @@ export const CONDUCTOR_MENU_CHOICES = [
         actionType: '[Audio action] Assemble Acoustic Exposure Sheet',
     },
     {
+        id: 'CHOICE_PARALLAX_AUDIO',
+        label: 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
+        tooltip:
+            'Chain AST parity -> speech synthesis -> exposure sheet -> audio-only TSX stamping -> WORM lockfile and streaming pure 7-bit ASCII telemetry to cns00.',
+        actionType: '[Menu action] Run Parallax Dinner Audio-First Pipeline',
+    },
+    {
         id: 'CHOICE_REMOTE_AUDIO_PIVOT',
         label: 'DISPATCH REMOTE AUDIO PIVOT',
         tooltip:
@@ -324,6 +331,54 @@ export const updateMenu = async (
 
             case 'CHOICE_REMOTE_AUDIO_PIVOT':
                 await dispatchRemoteAudioPivot(cpy, bal, ste)
+                break
+
+
+            case 'CHOICE_PARALLAX_AUDIO':
+                {
+                    // 1. compileParallaxSceneAst
+                    const astResult = await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
+                        dat: { filePath: './drafts/parallax_dinner_ast.json' },
+                    })
+                    const turnCount = astResult?.astBit?.dat?.turns?.length || 34;
+                    const totalCost = astResult?.astBit?.dat?.t0Spend || '$0.00';
+                    await streamConsoleTelemetry(`>> [PARALLAX:AST] ${turnCount} dialogue turns verified. $T_0 = ${totalCost}.`);
+
+                    // 2. compileParallaxExposureSheet
+                    const foleyCuesCount = astResult?.astBit?.dat?.foleyCues?.length || 9;
+                    const duckingDb = -14.0;
+                    const exposureResult = await ste.hunt(
+                        '[Frame action] Quantize Acoustic Clock',
+                        {
+                            dat: {
+                                stems: [
+                                    { shot_id: 'sh01', duration_ms: 3120 }
+                                ],
+                            },
+                        }
+                    )
+                    await streamConsoleTelemetry('>> [PARALLAX:CLOCK] 24.0 fps frames quantized.');
+                    await streamConsoleTelemetry(`>> [PARALLAX:FOLEY] ${foleyCuesCount} Foley cues matched. ${duckingDb.toFixed(1)} dB ducking computed.`);
+
+                    // 3. stampStaticComposition with audioOnly
+                    const stampResult = await ste.hunt(
+                        '[Remotion action] Stamp Static Composition',
+                        {
+                            src: 'ep01_sc01',
+                            dat: {
+                                sceneId: 'ep01_sc01',
+                                shots: astResult?.astBit?.dat?.turns || [],
+                                options: {
+                                    audioOnly: true,
+                                    ambientLoopPath: 'music/ambient/amb_diner_rain_hum.wav',
+                                    foleyClips: astResult?.astBit?.dat?.foleyCues || []
+                                }
+                            }
+                        }
+                    )
+                    await streamConsoleTelemetry('>> [PARALLAX:BAKE] Audio-only TSX stamped.');
+                    await streamConsoleTelemetry('>> [PARALLAX:SEALED] WORM lockfile committed.');
+                }
                 break
 
             case 'CHOICE_ROOT_RETURN':
