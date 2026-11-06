@@ -167,6 +167,13 @@ export const synthesizeSingleLineWithRetry = async (
                 })
             }
 
+            if (global.LIBRARY) {
+                await global.LIBRARY.hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: `>> [POLL] Staging inode detected (${confirmedSize} bytes)... Stabilized.`,
+                })
+            }
+
             if (!verifyZeroByteSentinel(stagingPath)) {
                 throw new Error(
                     'ZERO_BYTE_POISON_BREACH: Header validation failed or size < 1024 bytes',
