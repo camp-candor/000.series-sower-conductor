@@ -189,7 +189,7 @@ export const synthesizeSingleLineWithRetry = async (
                 .digest('hex')
             const durationMs =
                 Math.round(
-                    ((confirmedSize - 44) / (48000 * 2 * (24 / 8))) * 1000,
+                    ((confirmedSize - 44) / (48000 * 2)) * 1000,
                 ) || 1000
 
             if (global.LIBRARY) {
@@ -369,4 +369,30 @@ export const executeSceneSpeech = async (
     }
 
     return cpy
+}
+
+export const verifyNonSilentWavPcm = (filePath: string): { readonly ok: boolean; readonly rms: number; readonly peak: number; readonly sampleCount: number } => {
+    const buffer = fs.readFileSync(filePath)
+    if (buffer.length <= 44) {
+        return { ok: false, rms: 0, peak: 0, sampleCount: 0 }
+    }
+
+    let sumSq = 0
+    let peak = 0
+    const sampleCount = (buffer.length - 44) / 2
+
+    for (let i = 44; i < buffer.length; i += 2) {
+        const sample = buffer.readInt16LE(i)
+        const absSample = Math.abs(sample)
+        if (absSample > peak) peak = absSample
+        sumSq += sample * sample
+    }
+
+    const rms = Math.sqrt(sumSq / sampleCount)
+
+    if (rms <= 50 || peak > 32767) {
+        return { ok: false, rms, peak, sampleCount }
+    }
+
+    return { ok: true, rms, peak, sampleCount }
 }
