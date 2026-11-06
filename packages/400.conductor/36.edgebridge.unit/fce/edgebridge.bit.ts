@@ -1,20 +1,19 @@
 import {
-    AcquireLeasePayload,
     HardwareLeaseReceipt,
+    TelemetryIngressPayload,
 } from './edgebridge.interface.js'
 
-export default interface EdgeBridgeBit {
+export default interface EdgebridgeBit {
     idx: string
     src?: string
     val?: number
     dat?: {
-        jobId?: string
-        sceneId?: string
-        lockfilePath?: string
-        activeTargetUrl?: string
-        leasePayload?: AcquireLeasePayload
-        leaseReceipt?: HardwareLeaseReceipt
+        receipt?: HardwareLeaseReceipt
+        telemetry?: TelemetryIngressPayload
+        endpoint?: string
         [key: string]: any
     }
     slv?: Function
 }
+
+export type EdgeBridgeBit = EdgebridgeBit

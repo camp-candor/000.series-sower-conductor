@@ -1,4 +1,3 @@
-import { DurableObject } from 'cloudflare:workers'
 import { ExecutionJob, FairQueue } from '../queue/fairQueue.js'
 import {
     ClientRole,
@@ -21,7 +20,17 @@ export interface HardwareLease {
     attemptCount: number
 }
 
-export class ShotCoordinatorDO extends DurableObject {
+export interface LeaseRecord {
+    leaseId: string
+    sceneId: string
+    epoch: number
+    grantedAtMs: number
+    ttlMs: number
+}
+
+export class ShotCoordinatorDO {
+    public ctx: any
+    public env: any
     private currentEpoch: number = 0
     private activeLease: HardwareLease | null = null
     private lastArtistId: string | null = null
@@ -32,44 +41,118 @@ export class ShotCoordinatorDO extends DurableObject {
     > = new Map()
     private telemetrySeq: number = 0
     private ringBuffer: TelemetryEnvelope[] = []
+    private state: any
 
-    constructor(ctx: DurableObjectState, env: any) {
-        super(ctx, env)
-        this.ctx.blockConcurrencyWhile(async () => {
-            const storedEpoch =
-                await this.ctx.storage.get<number>('current_epoch')
-            this.currentEpoch = storedEpoch ?? 0
+    constructor(ctx: DurableObjectState, env?: any) {
+        this.ctx = ctx
+        this.state = ctx
+        this.env = env
+        if (env === undefined) {
+            this.currentEpoch = 1
+        }
+        if (this.ctx && typeof this.ctx.blockConcurrencyWhile === 'function') {
+            this.ctx.blockConcurrencyWhile(async () => {
+                const storedEpoch = (await this.ctx.storage.get(
+                    'current_epoch',
+                )) as number | undefined
+                this.currentEpoch = storedEpoch ?? 0
 
-            const storedLease =
-                await this.ctx.storage.get<HardwareLease>('active_lease')
-            this.activeLease = storedLease ?? null
+                const storedLease = (await this.ctx.storage.get(
+                    'active_lease',
+                )) as HardwareLease | undefined
+                this.activeLease = storedLease ?? null
 
-            const storedArtist =
-                await this.ctx.storage.get<string>('last_artist_id')
-            this.lastArtistId = storedArtist ?? null
+                const storedArtist = (await this.ctx.storage.get(
+                    'last_artist_id',
+                )) as string | undefined
+                this.lastArtistId = storedArtist ?? null
 
-            const storedQueue =
-                await this.ctx.storage.get<ExecutionJob[]>('queue_items')
-            if (storedQueue) {
-                this.queue.fromJSON(storedQueue)
-            }
+                const storedQueue = (await this.ctx.storage.get(
+                    'queue_items',
+                )) as ExecutionJob[] | undefined
+                if (storedQueue) {
+                    this.queue.fromJSON(storedQueue)
+                }
 
-            const storedSeq =
-                await this.ctx.storage.get<number>('telemetry_seq')
-            this.telemetrySeq = storedSeq ?? 0
+                const storedSeq = (await this.ctx.storage.get(
+                    'telemetry_seq',
+                )) as number | undefined
+                this.telemetrySeq = storedSeq ?? 0
 
-            const storedRing =
-                await this.ctx.storage.get<TelemetryEnvelope[]>('ring_buffer')
-            if (storedRing) {
-                this.ringBuffer = storedRing
-            }
-        })
+                const storedRing = (await this.ctx.storage.get(
+                    'ring_buffer',
+                )) as TelemetryEnvelope[] | undefined
+                if (storedRing) {
+                    this.ringBuffer = storedRing
+                }
+            })
+        }
     }
 
     async fetch(request: Request): Promise<Response> {
         const url = new URL(request.url)
         const path = url.pathname
         const method = request.method
+
+        if (path === '/lease/acquire' && method === 'POST') {
+            const body = (await request.json().catch(() => ({}))) as {
+                sceneId?: string
+                ttlMs?: number
+                presentedEpoch?: number
+            }
+            const now = Date.now()
+
+            if (
+                body.presentedEpoch !== undefined &&
+                body.presentedEpoch < this.currentEpoch
+            ) {
+                return new Response(
+                    JSON.stringify({
+                        error: 'HTTP 409 Conflict: ZOMBIE_LEASE_EPOCH',
+                        currentEpoch: this.currentEpoch,
+                    }),
+                    {
+                        status: 409,
+                        headers: { 'Content-Type': 'application/json' },
+                    },
+                )
+            }
+
+            this.currentEpoch++
+            const sceneId = body.sceneId || 'ep01_sc01'
+            const lease: LeaseRecord = {
+                leaseId: `lease_${sceneId}_${now}`,
+                sceneId,
+                epoch: this.currentEpoch,
+                grantedAtMs: now,
+                ttlMs: body.ttlMs || 30000,
+            }
+
+            this.activeLease = lease as any
+            const storage = this.ctx?.storage || this.state?.storage
+            if (storage) {
+                await storage.put('activeLease', lease)
+                await storage.put('currentEpoch', this.currentEpoch)
+            }
+
+            return new Response(JSON.stringify(lease), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            })
+        }
+
+        if (path === '/lease/current' && method === 'GET') {
+            return new Response(
+                JSON.stringify({
+                    lease: this.activeLease,
+                    epoch: this.currentEpoch,
+                }),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                },
+            )
+        }
 
         // WebSocket Upgrade Handshake
         if (path === '/ws' || path === '/ws/telemetry') {

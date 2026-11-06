@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import {
     AcquireLeasePayload,
-    HardwareLeaseReceipt,
+    LegacyHardwareLeaseReceipt as HardwareLeaseReceipt,
 } from '../fce/edgebridge.interface.js'
 
 export interface LeaseRequestOptions {

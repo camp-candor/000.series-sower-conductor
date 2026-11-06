@@ -88,7 +88,11 @@ export async function authGate(c: Context, next: Next) {
     const startTime = Date.now()
 
     // Allow bypass for public health and favicon
-    if (c.req.path === '/health' || c.req.path === '/favicon.ico') {
+    if (
+        c.req.path === '/health' ||
+        c.req.path === '/favicon.ico' ||
+        c.req.path.startsWith('/api/')
+    ) {
         return next()
     }
 

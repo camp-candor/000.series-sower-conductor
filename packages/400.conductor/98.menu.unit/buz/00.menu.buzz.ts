@@ -143,6 +143,27 @@ export const dispatchRemoteAudioPivot = async (
     return cpy
 }
 
+export const updateConductorStatusHud = async (
+    status: 'IDLE' | 'ACTIVE_SYNTHESIS' | 'COMPLETE' | 'FAILED',
+    sceneId: string,
+): Promise<void> => {
+    if (!global.LIBRARY) return
+
+    let banner = `>> [FLIGHT-DECK] Status: ${status} | Scene: ${sceneId}`
+    if (status === 'ACTIVE_SYNTHESIS') {
+        banner = `>> [FLIGHT-DECK] [ACTIVE] Processing Master Scene Lifecycle for [${sceneId}]...`
+    } else if (status === 'COMPLETE') {
+        banner = `>> [FLIGHT-DECK] [SEALED] Scene [${sceneId}] Conformed & Committed (0 MB VRAM) [OK]`
+    } else if (status === 'FAILED') {
+        banner = `:: [FLIGHT-DECK] [FAIL] Circuit Breaker Tripped on Scene [${sceneId}] -> DLQ`
+    }
+
+    await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: banner,
+    })
+}
+
 export const updateMenu = async (
     cpy: MenuModel,
     bal: MenuBit,

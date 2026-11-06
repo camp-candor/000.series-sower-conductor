@@ -133,6 +133,31 @@ app.all('/lease/*', async (c) => {
     return stub.fetch(c.req.raw)
 })
 
+// Feature 7.3: Edge Bridge Gateway Lease Sync & Telemetry Routes
+app.post('/api/lease/acquire', async (c) => {
+    const id = c.env.SHOT_COORDINATOR.idFromName('global_shot_coordinator')
+    const stub = c.env.SHOT_COORDINATOR.get(id)
+    const url = new URL(c.req.raw.url)
+    url.pathname = '/lease/acquire'
+    const newReq = new Request(url.toString(), c.req.raw)
+    return stub.fetch(newReq)
+})
+
+app.post('/api/telemetry/audio', async (c) => {
+    const payload: any = await c.req.json().catch(() => ({}))
+    if (payload.vramUsedMb !== 0) {
+        return c.json(
+            { error: 'VIOLATION: Rig 1 Zero-VRAM Invariant breached' },
+            400,
+        )
+    }
+    // Record telemetry receipt cleanly without Git mutations
+    return c.json(
+        { status: 'ACCEPTED', timestamp: new Date().toISOString() },
+        200,
+    )
+})
+
 // 6. Mount Assembly Telemetry Sink & Provenance Settlement Router
 app.route('/assembly', assemblyRoutes)
 

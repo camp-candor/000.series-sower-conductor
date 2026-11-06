@@ -2,6 +2,7 @@ export {
     initMenu,
     updateMenu,
     dispatchRemoteAudioPivot,
+    updateConductorStatusHud,
     CONDUCTOR_GRID_LEFT,
     CONDUCTOR_GRID_RIGHT,
     CONDUCTOR_MENU_CHOICES,
