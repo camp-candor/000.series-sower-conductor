@@ -19,6 +19,8 @@ import CpusUnit from './28.cpus.unit/cpus.unit.js'
 import ContinuityUnit from './29.continuity.unit/continuity.unit.js'
 import CanonUnit from './30.canon.unit/canon.unit.js'
 import AudioUnit from './32.audio.unit/audio.unit.js'
+import Audio from './32.audio.unit/fce/audio.interface.js'
+import { AudioModel } from './32.audio.unit/audio.model.js'
 import AssetUnit from './33.asset.unit/asset.unit.js'
 import AbstractSyntaxTreeUnit from './34.abstractsyntaxtree.unit/abstractsyntaxtree.unit.js'
 import RemotionUnit from './35.remotion.unit/remotion.unit.js'
@@ -109,7 +111,7 @@ export default class UnitData implements Model {
   cpus: any;
   continuity: any;
   canon: any;
-  audio: any;
+  audio: Audio = new AudioModel();
   asset: any;
   ast: any;
   remotion: any = new RemotionModel();
