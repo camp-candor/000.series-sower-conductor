@@ -13,6 +13,7 @@ export default interface RemotionBit {
         shots?: SceneShotPlan[]
         options?: StampCompositionOptions
         receipt?: StampCompositionReceipt
+        audioOnly?: boolean
         [key: string]: any
     }
     slv?: Function
