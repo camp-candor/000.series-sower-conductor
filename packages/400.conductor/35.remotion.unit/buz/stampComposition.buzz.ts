@@ -62,12 +62,35 @@ export async function stampStaticComposition(
     )
     const duckExpression = calculateDuckVolumeExpression(shots)
 
-    const wrapperComponents = shots
-        .map((s, idx) => generateShotCameraWrapper(idx + 1, s))
-        .join('\n\n')
-    const sequenceNodes = shots
-        .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
-        .join('\n\n')
+    let wrapperComponents = ''
+    let sequenceNodes = ''
+
+    if (options.audioOnly) {
+        const dialogueSequences = shots.map(s => {
+            const clipPath = s.audioWavPath || `audio/dialogue/${s.shotIndex}.wav`;
+            return `          {/* Track 1: Dialogue */}
+          <Sequence from={${s.fromFrame}} durationInFrames={${s.durationFrames}}>
+            <Audio src={staticFile('${clipPath}')} />
+          </Sequence>`;
+        }).join('\n');
+
+
+        const foleySequences = (options.foleyClips || []).map(f => {
+            return `          {/* Track 2: Foley */}
+          <Sequence from={${f.fromFrame}} durationInFrames={${f.durationInFrames}}>
+            <Audio src={staticFile('${f.foleyPath}')} volume={${f.volumeLinear}} />
+          </Sequence>`;
+        }).join('\n');
+
+
+        sequenceNodes = `
+${dialogueSequences}
+${foleySequences}`;
+
+    } else {
+        wrapperComponents = shots.map((s, idx) => generateShotCameraWrapper(idx + 1, s)).join('\n\n');
+        sequenceNodes = shots.map((s, idx) => generateOpticalStackJsx(idx + 1, s)).join('\n\n');
+    }
 
     // Construct raw TSX body with raw unquoted numeric literals
     const bodyContent = `
@@ -102,6 +125,8 @@ ${sequenceNodes}
 
     // Normalize LF line endings and compute SHA-256 body checksum
     const normalizedBody = bodyContent.replace(/\r\n/g, '\n')
+
+
     const checksumSha256 = crypto
         .createHash('sha256')
         .update(normalizedBody)
@@ -114,7 +139,10 @@ ${sequenceNodes}
 // @upstream_ast: sha256:${upstreamAstHash}
 `.trim()
 
-    const fullFileText = `${fileHeader}\n\n${normalizedBody}\n`
+    const fullFileText = `${fileHeader}
+
+${normalizedBody}
+`
 
     // Atomic POSIX write via temporary file
     const tmpPath = `${destinationPath}.tmp_${crypto.randomUUID()}`
@@ -123,11 +151,13 @@ ${sequenceNodes}
 
     if (isLocked) {
         process.stdout.write(
-            `>> [LOCKED-REFUSAL] Destination Master_${sceneId}.tsx is @locked. Stamped candidate Master_${sceneId}.candidate.tsx.\n`,
+            `>> [LOCKED-REFUSAL] Destination Master_${sceneId}.tsx is @locked. Stamped candidate Master_${sceneId}.candidate.tsx.
+`,
         )
     } else {
         process.stdout.write(
-            `>> [METAPROGRAM] [OK] Stamped drafts/Master_${sceneId}.tsx (${totalFrames} frames across ${shots.length} shots).\n`,
+            `>> [METAPROGRAM] [OK] Stamped drafts/Master_${sceneId}.tsx (${totalFrames} frames across ${shots.length} shots).
+`,
         )
     }
 

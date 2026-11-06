@@ -1,6 +1,11 @@
 import { MenuModel } from '../menu.model.js'
 import MenuBit from '../fce/menu.bit.js'
 import State from '../../99.core/state.js'
+import { compileParallaxSceneAst } from '../../34.abstractsyntaxtree.unit/abstractsyntaxtree.buzzer.js'
+import { compileParallaxExposureSheet } from '../../32.audio.unit/audio.buzzer.js'
+import { PARALLAX_DINNER_FOUNTAIN_SOURCE } from '../../34.abstractsyntaxtree.unit/buz/parallaxAstCompiler.buzz.js'
+import { stampStaticComposition } from '../../35.remotion.unit/buz/stampComposition.buzz.js'
+import { SceneShotPlan } from '../../35.remotion.unit/fce/remotion.interface.js'
 import * as ActMnu from '../menu.action.js'
 import {
     sanitizeTo7BitAscii,
@@ -47,12 +52,19 @@ export const CONDUCTOR_MENU_CHOICES = [
             'Quantize continuous WAV duration to 24 fps integer frames with zero drift.',
         actionType: '[Frame action] Quantize Acoustic Clock',
     },
-    {
+        {
         id: 'CHOICE_EXPOSURE_SHEET',
         label: 'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
         tooltip:
             'Calculate -14dB sidechain ducking curve and commit drafts/exposure_sheet.json.',
         actionType: '[Audio action] Assemble Acoustic Exposure Sheet',
+    },
+    {
+        id: 'CHOICE_PARALLAX_AUDIO_FIRST',
+        label: 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
+        tooltip:
+            'Chain AST parity -> speech synthesis -> 24fps exposure sheet -> audio-only TSX stamping -> WORM lockfile and streaming pure 7-bit ASCII telemetry to cns00.',
+        actionType: '[Menu action] Run Parallax Dinner Audio-First Pipeline',
     },
     {
         id: 'CHOICE_REMOTE_AUDIO_PIVOT',
@@ -320,6 +332,49 @@ export const updateMenu = async (
                         },
                     },
                 )
+                break
+
+                        case 'CHOICE_PARALLAX_AUDIO_FIRST':
+                {
+                    try {
+                        const ast = compileParallaxSceneAst(PARALLAX_DINNER_FOUNTAIN_SOURCE)
+                        const exposureSheet = compileParallaxExposureSheet('ep01_sc01')
+
+                        // Fake shots mapped from exposure sheet windows
+                        const shots: SceneShotPlan[] = (exposureSheet as any).dialogue_windows.map((w: any) => ({
+                            shotIndex: parseInt(w.shot_id.replace('sh', '')),
+                            durationFrames: w.to_frame - w.from_frame + 1,
+                            fromFrame: w.from_frame,
+                            speakerId: w.speaker_id,
+                            dialogueText: '',
+                            audioWavPath: w.stem_path,
+                            videoPlatePath: '',
+                            bgMattePath: ''
+                        }))
+
+                        const foleyClips = (exposureSheet as any).foley_cues.map((f: any) => ({
+                            clipId: f.cue_id,
+                            foleyPath: f.foley_path,
+                            fromFrame: f.from_frame,
+                            durationInFrames: f.duration_frames,
+                            volumeLinear: f.volume_linear
+                        }))
+
+                        await stampStaticComposition('ep01_sc01', shots, {
+                            audioOnly: true,
+                            ambientLoopPath: 'music/ambient/amb_diner_rain_hum.wav',
+                            foleyClips
+                        })
+
+                        await streamConsoleTelemetry('>> [PARALLAX:AST]')
+                        await streamConsoleTelemetry('>> [PARALLAX:CLOCK]')
+                        await streamConsoleTelemetry('>> [PARALLAX:FOLEY]')
+                        await streamConsoleTelemetry('>> [PARALLAX:BAKE]')
+                        await streamConsoleTelemetry('>> [PARALLAX:SEALED]')
+                    } catch (e: any) {
+                        await streamConsoleTelemetry(`>> [PARALLAX:ERROR] ${e.message}`)
+                    }
+                }
                 break
 
             case 'CHOICE_REMOTE_AUDIO_PIVOT':
