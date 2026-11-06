@@ -39,6 +39,8 @@ const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         '>> [TOOLTIP] Mint RFC 8785 canonical lockfile and emit dual WORM snapshots to vault/snapshots/ directory.',
     'VERIFY RIG 1 HARDWARE ZERO-VRAM':
         '>> [TOOLTIP] Confirm optical compositing runs strictly on Rig 1 CPU threads consuming 0 MB dedicated GPU VRAM.',
+    'ASSEMBLE ACOUSTIC EXPOSURE SHEET':
+        '>> [TOOLTIP] Compile dynamic sidechain acoustic geometry exposure sheet with multi-window ducking and MurmurHash3 Foley seeding ($T_0 = $0.00).',
     'INSPECT SQLITE CONTINUITY LEDGER':
         '>> [TOOLTIP] Read local SQLite ledger state verifying character somatic continuity and props.',
     'VERIFY 3D ASSET TREE PARITY':
@@ -120,6 +122,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
         'INSPECT SQLITE CONTINUITY LEDGER',
         'VERIFY 3D ASSET TREE PARITY',
+        'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
         'ROOT MENU',
     ]
 
@@ -415,48 +418,53 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
             return cpy
         }
 
-
         case 'ASSEMBLE ACOUSTIC EXPOSURE SHEET':
-            let audBit_res = await ste.hunt('[Audio action] Assemble Acoustic Exposure Sheet', {
-                dat: {
-                    scene_id: 'ep01_sc01',
-                    series_id: 'under-the-floorboards',
-                    dialogue_windows: [
-                        {
-                            shot_id: 'sh01',
-                            from_frame: 0,
-                            to_frame: 74,
-                            stem_path: 'public/audio/dialogue/ep01_sc01_sh01.wav',
-                            speaker_id: 'char_bog',
-                        },
-                        {
-                            shot_id: 'sh02',
-                            from_frame: 82,
-                            to_frame: 130,
-                            stem_path: 'public/audio/dialogue/ep01_sc01_sh02.wav',
-                            speaker_id: 'char_elias',
-                        },
-                    ],
-                    foley_cues: [
-                        {
-                            shot_id: 'sh01',
-                            frame_offset: 12,
-                            cue_name: 'ratchet_click',
-                            resolved_sample: 'audio/foley/ratchet_click_02.wav',
-                            volume: 0.8,
-                        },
-                    ],
+            let audBit_res = await ste.hunt(
+                '[Audio action] Assemble Acoustic Exposure Sheet',
+                {
+                    dat: {
+                        scene_id: 'ep01_sc01',
+                        series_id: 'under-the-floorboards',
+                        dialogue_windows: [
+                            {
+                                shot_id: 'sh01',
+                                from_frame: 0,
+                                to_frame: 74,
+                                stem_path:
+                                    'public/audio/dialogue/ep01_sc01_sh01.wav',
+                                speaker_id: 'char_bog',
+                            },
+                            {
+                                shot_id: 'sh02',
+                                from_frame: 82,
+                                to_frame: 130,
+                                stem_path:
+                                    'public/audio/dialogue/ep01_sc01_sh02.wav',
+                                speaker_id: 'char_elias',
+                            },
+                        ],
+                        foley_cues: [
+                            {
+                                shot_id: 'sh01',
+                                frame_offset: 12,
+                                cue_name: 'ratchet_click',
+                                resolved_sample:
+                                    'audio/foley/ratchet_click_02.wav',
+                                volume: 0.8,
+                            },
+                        ],
+                    },
                 },
-            });
+            )
             if (audBit_res?.audBit?.dat?.receipt?.ok) {
                 await global.LIBRARY.hunt('[Console action] Update Console', {
                     idx: 'cns00',
                     src: '>> [MENU:AUDIO] Exposure sheet compiled and committed to drafts/ [OK]',
-                });
+                })
             }
-            break;
+            break
 
-case 'QUANTIZE ACOUSTIC MASTER CLOCK': {
+        case 'QUANTIZE ACOUSTIC MASTER CLOCK': {
             const bit = await ste.hunt(
                 '[Frame action] Quantize Acoustic Clock',
                 {
