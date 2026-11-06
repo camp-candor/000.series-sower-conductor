@@ -1,189 +1,149 @@
-import fs from 'node:fs';
-import path from 'node:path';
+// packages/400.conductor/32.audio.unit/buz/audio.buzz.ts
 import { AudioModel } from '../audio.model.js';
 import AudioBit from '../fce/audio.bit.js';
-import State from '../../99.core/state.js';
 import {
-  DuckingKeyframe,
-  FoleyPlacement,
-  AcousticPacingManifest,
+  ExposureSheetDocument,
+  ExposureSheetReceipt,
+  ExposureSheetShotTrack,
 } from '../fce/audio.interface.js';
-import { QuantizedFrameBudget } from '../../24.frame.unit/fce/frame.interface.js';
+import { ExposureSheetDocumentSchema } from '../val/audio.val.js';
+import {
+  computeMultiWindowDuckingCurve,
+  calculateDuckedVolume,
+} from './duckingCalculator.buzz.js';
+import State from '../../99.core/state.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
-export function murmurHash3(key: string, seed = 0): number {
-  let h1 = seed >>> 0;
-  const c1 = 0xcc9e2d51;
-  const c2 = 0x1b873593;
+export const assembleExposureSheetDocument = (
+  seriesId: string,
+  sceneId: string,
+  windows: any[],
+  foleyEvents: any[],
+  ambientLoopPath = 'audio/ambient/machinery_bed.wav',
+  baseVolume = 0.4,
+): ExposureSheetDocument => {
+  const lastWindow = windows[windows.length - 1];
+  const totalFrames = lastWindow ? lastWindow.to_frame + 1 : 24;
+  const totalDurationMs = Math.round((totalFrames / 24) * 1000);
+  const duckedVolume = calculateDuckedVolume(baseVolume);
+  const duckingKeyframes = computeMultiWindowDuckingCurve(windows, totalFrames, baseVolume);
 
-  for (let i = 0; i < key.length; i++) {
-    let k1 = key.charCodeAt(i);
-    k1 = Math.imul(k1, c1);
-    k1 = (k1 << 15) | (k1 >>> 17);
-    k1 = Math.imul(k1, c2);
-
-    h1 ^= k1;
-    h1 = (h1 << 13) | (h1 >>> 19);
-    h1 = Math.imul(h1, 5) + 0xe6546b64;
-  }
-
-  h1 ^= key.length;
-  h1 ^= h1 >>> 16;
-  h1 = Math.imul(h1, 0x85ebca6b);
-  h1 ^= h1 >>> 13;
-  h1 = Math.imul(h1, 0xc2b2ae35);
-  h1 ^= h1 >>> 16;
-
-  return h1 >>> 0;
-}
-
-export function computeQuadraticDuckingCurve(
-  totalFrames: number,
-  speechWindows: Array<{ startFrame: number; endFrame: number }>,
-  duckingFloorDb = -14.0,
-  attackFrames = 6,
-  releaseFrames = 12
-): DuckingKeyframe[] {
-  const frames: DuckingKeyframe[] = [];
-
-  for (let f = 0; f < totalFrames; f++) {
-    let currentGainDb = 0.0;
-
-    for (const win of speechWindows) {
-      if (f >= win.startFrame && f <= win.endFrame) {
-        // Fully ducked during active speech
-        currentGainDb = duckingFloorDb;
-        break;
-      } else if (f >= win.startFrame - attackFrames && f < win.startFrame) {
-        // Quadratic easing down (Attack)
-        const t = (f - (win.startFrame - attackFrames)) / attackFrames;
-        const gain = duckingFloorDb * Math.pow(t, 2);
-        currentGainDb = Math.min(currentGainDb, gain);
-      } else if (f > win.endFrame && f <= win.endFrame + releaseFrames) {
-        // Quadratic easing recovery (Release)
-        const t = 1.0 - (f - win.endFrame) / releaseFrames;
-        const gain = duckingFloorDb * Math.pow(t, 2);
-        currentGainDb = Math.min(currentGainDb, gain);
-      }
-    }
-
-    const interpolatedGainLinear = Number(Math.pow(10, currentGainDb / 20).toFixed(4));
-    frames.push({
-      frame: f,
-      gainDb: Number(currentGainDb.toFixed(2)),
-      interpolatedGainLinear,
-    });
-  }
-
-  return frames;
-}
-
-export const initAudio = (cpy: AudioModel, bal: AudioBit, _ste: State) => {
-  if (bal.slv) bal.slv({ audioBit: { idx: 'init-audio', val: 1 } });
-  return cpy;
-};
-
-export const generateDuckingEnvelope = (cpy: AudioModel, bal: AudioBit, _ste: State) => {
-  const cns = '>> [DUCKING]';
-  const sceneId = bal.src || bal.dat?.sceneId || 'scene_000';
-  const totalFrames = bal.dat?.totalFrames as number;
-  const speechWindows = (bal.dat?.speechWindows || []) as Array<{ startFrame: number; endFrame: number }>;
-  const duckingFloorDb = bal.dat?.duckingFloorDb ?? cpy.defaultDuckingFloorDb;
-  const attackFrames = bal.dat?.attackFrames ?? 6;
-  const releaseFrames = bal.dat?.releaseFrames ?? 12;
-
-  if (!totalFrames || totalFrames <= 0) {
-    const err = 'DUCKING_REJECTED: totalFrames must be a positive integer';
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ audioBit: { idx: 'generate-ducking-envelope-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
-  const duckingTimeline = computeQuadraticDuckingCurve(
-    totalFrames,
-    speechWindows,
-    duckingFloorDb,
-    attackFrames,
-    releaseFrames
-  );
-
-  const foleyCues = (bal.dat?.foleyCues || []) as Array<{ cueName: string; sampleKey: string; frameOffset: number }>;
-  const foleyPlacements: FoleyPlacement[] = foleyCues.map((c) => ({
-    cueName: c.cueName,
-    sampleKey: c.sampleKey,
-    deterministicSeed: murmurHash3(`${sceneId}:${c.cueName}:${c.sampleKey}`),
-    frameOffset: c.frameOffset,
-    volumeMultiplier: 1.0,
+  const track1: ExposureSheetShotTrack[] = windows.map((w) => ({
+    shot_id: w.shot_id,
+    from_frame: w.from_frame,
+    to_frame: w.to_frame,
+    target_frames: w.to_frame - w.from_frame + 1,
+    dialogue_stem: w.stem_path,
+    dialogue_sha256: w.sha256 || '0000000000000000000000000000000000000000000000000000000000000000',
+    foley_events: foleyEvents.filter((f) => f.shot_id === w.shot_id),
   }));
 
-  const manifest: AcousticPacingManifest = {
-    sceneId,
-    duckingFloorDb,
-    attackFrames,
-    releaseFrames,
-    duckingTimeline,
-    foleyPlacements,
-  };
-
-  cpy.totalEnvelopesGenerated += 1;
-  cpy.lastPacingManifest = manifest;
-
-  process.stdout.write(
-    `${cns} [OK] Scene ${sceneId}: Generated ${duckingTimeline.length} ducking frames (${duckingFloorDb}dB floor, ${foleyPlacements.length} Foley cues)\n`
-  );
-
-  if (bal.slv) {
-    bal.slv({
-      audioBit: {
-        idx: 'generate-ducking-envelope',
-        val: 1,
-        src: sceneId,
-        dat: manifest,
+  return {
+    schema_version: '1.0.0',
+    series_id: seriesId,
+    scene_id: sceneId,
+    total_frames: totalFrames,
+    total_duration_ms: totalDurationMs,
+    tracks: {
+      track1_dialogue: track1,
+      track2_foley: foleyEvents,
+      track3_ambient: {
+        ambient_loop_path: ambientLoopPath,
+        base_volume: baseVolume,
+        ducked_volume: duckedVolume,
+        ducking_keyframes: duckingKeyframes,
       },
-    });
-  }
+    },
+  };
+};
 
+export const initAudio = (cpy: AudioModel, bal: AudioBit, ste: State) => {
+  if (bal.slv != null) bal.slv({ audBit: { idx: 'init-audio', val: 1 } });
   return cpy;
 };
 
-export const writeExposureSheet = (cpy: AudioModel, bal: AudioBit, _ste: State) => {
-  const cns = '>> [EXPOSURE-SHEET]';
-  const outputPath = bal.src || bal.dat?.outputPath || path.resolve(process.cwd(), 'drafts/exposure_sheet.json');
-  const payload = bal.dat?.manifest;
+export const updateAudio = (cpy: AudioModel, bal: AudioBit, ste: State) => {
+  if (bal.slv != null) bal.slv({ audBit: { idx: 'update-audio' } });
+  return cpy;
+};
 
-  if (!payload) {
-    const err = 'WRITE_REJECTED: Missing exposure sheet payload in dat.manifest';
-    process.stderr.write(`${cns} [FAIL] ${err}\n`);
-    if (bal.slv) return bal.slv({ audioBit: { idx: 'write-exposure-sheet-error', val: 0, src: err } });
-    throw new Error(err);
-  }
-
+export const assembleAcousticExposureSheet = (cpy: AudioModel, bal: AudioBit, ste: State) => {
+  cpy.isAssembling = true;
   try {
-    const outputDir = path.dirname(outputPath);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    const sceneId = bal.dat?.scene_id || 'ep01_sc01';
+    const seriesId = bal.dat?.series_id || 'under-the-floorboards';
+    const windows = bal.dat?.dialogue_windows || [];
+    const foleyCues = bal.dat?.foley_cues || [];
+    const ambientLoop = bal.dat?.ambient_loop_path || 'audio/ambient/machinery_bed.wav';
+
+    const doc = assembleExposureSheetDocument(seriesId, sceneId, windows, foleyCues, ambientLoop);
+    ExposureSheetDocumentSchema.parse(doc);
+
+    const draftsDir = path.resolve('drafts');
+    if (!fs.existsSync(draftsDir)) {
+      fs.mkdirSync(draftsDir, { recursive: true });
     }
 
-    const tmpPath = `${outputPath}.tmp`;
-    fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
-    fs.renameSync(tmpPath, outputPath);
+    const finalPath = path.join(draftsDir, 'exposure_sheet.json');
+    const stagingPath = `${finalPath}.tmp`;
 
-    process.stdout.write(`${cns} [OK] Committed exposure sheet to ${outputPath}\n`);
+    const serialized = JSON.stringify(doc, null, 2);
+    fs.writeFileSync(stagingPath, serialized, 'utf8');
+    fs.renameSync(stagingPath, finalPath);
 
-    if (bal.slv) {
+    const sha256 = crypto.createHash('sha256').update(serialized).digest('hex');
+
+    const receipt: ExposureSheetReceipt = {
+      ok: true,
+      scene_id: sceneId,
+      total_frames: doc.total_frames,
+      manifest_path: finalPath,
+      ducking_point_count: doc.tracks.track3_ambient.ducking_keyframes.length,
+      foley_event_count: foleyCues.length,
+      sha256,
+    };
+
+    cpy.lastExposureSheet = doc;
+    cpy.lastReceipt = receipt;
+    cpy.isAssembling = false;
+
+    if (global.LIBRARY) {
+      global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `>> [EXPOSURE-SHEET] [OK] Compiled [${sceneId}]: ${doc.total_frames} frames | DuckingKeyframes=${receipt.ducking_point_count} | Foley=${receipt.foley_event_count}`,
+      });
+      global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `>> [EXPOSURE-SHEET] Committed to drafts/exposure_sheet.json (SHA: ${sha256.substring(0, 12)}...)`,
+      });
+    }
+
+    if (bal.slv != null) {
       bal.slv({
-        audioBit: {
-          idx: 'write-exposure-sheet',
-          val: 1,
-          src: outputPath,
+        audBit: {
+          idx: 'assemble-acoustic-exposure-sheet-success',
+          dat: { receipt, exposureSheet: doc },
         },
       });
     }
   } catch (err: any) {
-    process.stderr.write(`${cns} [FAIL] ${err.message}\n`);
-    if (bal.slv) {
-      bal.slv({ audioBit: { idx: 'write-exposure-sheet-error', val: 0, src: err.message } });
-    } else {
-      throw err;
+    cpy.isAssembling = false;
+    const errorMsg = err.message || String(err);
+    if (global.LIBRARY) {
+      global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `:: [EXPOSURE-SHEET] [FAIL] Exposure sheet assembly faulted: ${errorMsg}`,
+      });
+    }
+    if (bal.slv != null) {
+      bal.slv({
+        audBit: {
+          idx: 'assemble-acoustic-exposure-sheet-error',
+          src: errorMsg,
+        },
+      });
     }
   }
 

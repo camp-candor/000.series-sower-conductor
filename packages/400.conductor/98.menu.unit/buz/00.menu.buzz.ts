@@ -172,6 +172,47 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
 
     // [Task 7.1.2] Interactive Choice Action Switchboard Dispatcher
     switch (selection) {
+
+        case 'ASSEMBLE ACOUSTIC EXPOSURE SHEET':
+            const bit_audio = await ste.hunt('[Audio action] Assemble Acoustic Exposure Sheet', {
+                dat: {
+                    scene_id: 'ep01_sc01',
+                    series_id: 'under-the-floorboards',
+                    dialogue_windows: [
+                        {
+                            shot_id: 'sh01',
+                            from_frame: 0,
+                            to_frame: 74,
+                            stem_path: 'public/audio/dialogue/ep01_sc01_sh01.wav',
+                            speaker_id: 'char_bog',
+                        },
+                        {
+                            shot_id: 'sh02',
+                            from_frame: 82,
+                            to_frame: 130,
+                            stem_path: 'public/audio/dialogue/ep01_sc01_sh02.wav',
+                            speaker_id: 'char_elias',
+                        },
+                    ],
+                    foley_cues: [
+                        {
+                            shot_id: 'sh01',
+                            frame_offset: 12,
+                            cue_name: 'ratchet_click',
+                            resolved_sample: 'audio/foley/ratchet_click_02.wav',
+                            volume: 0.8,
+                        },
+                    ],
+                },
+            });
+            if (bit_audio?.audBit?.dat?.receipt?.ok) {
+                await global.LIBRARY.hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: '>> [MENU:AUDIO] Exposure sheet compiled and committed to drafts/ [OK]',
+                });
+            }
+            break;
+
         case 'SYNTHESIZE SCENE AUDIO STEMS':
             const bit = await ste.hunt('[Speech action] Execute Scene Speech', {
                 dat: {
