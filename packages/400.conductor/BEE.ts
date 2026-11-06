@@ -11,6 +11,8 @@ import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js';
 import { reducer as somaticdspReducer } from './10.somaticdsp.unit/somaticdsp.reduce.js';
 import LedgerUnit from './21.ledger.unit/ledger.unit.js'
 import FrameUnit from './24.frame.unit/frame.unit.js'
+import Frame from './24.frame.unit/fce/frame.interface.js';
+import { FrameModel } from './24.frame.unit/frame.model.js';
 import VramUnit from './26.vram.unit/vram.unit.js'
 import CudaUnit from './27.cuda.unit/cuda.unit.js'
 import CpusUnit from './28.cpus.unit/cpus.unit.js'
@@ -101,7 +103,7 @@ export default class UnitData implements Model {
   speech: Speech = new SpeechModel();
   somaticdsp: Somaticdsp = new SomaticdspModel();
   ledger: any;
-  frame: any;
+  frame: Frame = new FrameModel();
   vram: any;
   cuda: any;
   cpus: any;

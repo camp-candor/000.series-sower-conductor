@@ -1,1 +1,9 @@
-export { initFrame, quantizeStemDuration, compileTimelineBudget } from './buz/frame.buzz.js';
+export {
+  initFrame,
+  updateFrame,
+  quantizeAcousticClock,
+  extractDurationMsViaFfprobe,
+  calculateCausalVaeAllocation,
+  quantizeShotTimeline,
+  SAMPLES_PER_FRAME,
+} from './buz/frame.buzz.js';
