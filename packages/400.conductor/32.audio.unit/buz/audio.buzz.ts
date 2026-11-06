@@ -1,3 +1,12 @@
+
+export {
+    PARALLAX_FOLEY_REGISTRY,
+    mulberry32,
+    matchActionLinesToFoleyPlacements,
+    mergeCloseSpeechWindows,
+    compileParallaxExposureSheet
+} from './foleyMatcher.buzz.js'
+
 // packages/400.conductor/32.audio.unit/buz/audio.buzz.ts
 import { AudioModel } from '../audio.model.js'
 import AudioBit from '../fce/audio.bit.js'
