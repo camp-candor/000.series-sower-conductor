@@ -179,11 +179,11 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
                 .fn()
                 .mockImplementation((action: string, payload: any) => {
                     if (
-                        action === '[Choice action] Open Choice' &&
-                        typeof payload.cb === 'function'
+                        action === '[Open action] Open Choice' &&
+                        typeof payload.dat?.cb === 'function'
                     ) {
-                        // Trigger cb for index 1 (INSPECT CHARACTER SOMATIC DSP)
-                        payload.cb(1)
+                        // Trigger cb for label (INSPECT CHARACTER SOMATIC DSP)
+                        payload.dat.cb('INSPECT CHARACTER SOMATIC DSP')
                         return Promise.resolve({ chcBit: { src: 'ROOT MENU' } })
                     }
                     return Promise.resolve({ grdBit: { dat: {} } })
@@ -259,7 +259,7 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
         it('schedules next tick via non-recursive setTimeout(..., 333)', async () => {
             vi.useFakeTimers()
             const mockLibHunt = vi.fn().mockImplementation((action: string) => {
-                if (action === '[Choice action] Open Choice') {
+                if (action === '[Open action] Open Choice') {
                     return Promise.resolve({
                         chcBit: { src: 'AUDIT DIALOGUE AST CONTRACT' },
                     })

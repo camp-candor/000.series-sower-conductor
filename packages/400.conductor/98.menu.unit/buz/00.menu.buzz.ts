@@ -96,6 +96,7 @@ export const dispatchRemoteAudioPivot = async (
         formatTelemetryLine(
             'AUDIO-MICROSERVICE',
             'Triggering remote pivot health action via hunt...',
+            'INFO',
         ),
     )
 
@@ -164,17 +165,24 @@ export const updateMenu = async (
         ySpan: CONDUCTOR_GRID_LEFT.ySpan,
     })
 
-    const choiceBit = await global.LIBRARY.hunt('[Choice action] Open Choice', {
-        dat: { clr0: 0, clr1: 3 }, // Black on Yellow / Green
+    const choiceBit = await global.LIBRARY.hunt('[Open action] Open Choice', {
+        dat: {
+            clr0: 0,
+            clr1: 3, // Black on Yellow / Green
+            cb: async (focusedLabel: string) => {
+                const choice = CONDUCTOR_MENU_CHOICES.find(
+                    (c) => c.label === focusedLabel,
+                )
+                if (choice) {
+                    await streamConsoleTelemetry(
+                        `>> [TOOLTIP] ${choice.tooltip}`,
+                    )
+                }
+            },
+        },
         src: 'VERTICAL',
         lst,
         net: gridBit?.grdBit?.dat,
-        cb: async (focusedIndex: number) => {
-            const choice = CONDUCTOR_MENU_CHOICES[focusedIndex]
-            if (choice) {
-                await streamConsoleTelemetry(`>> [TOOLTIP] ${choice.tooltip}`)
-            }
-        },
     })
 
     const selectedLabel = choiceBit?.chcBit?.src
