@@ -1,3 +1,4 @@
+// packages/400.conductor/32.audio.unit/audio.action.ts
 import { Action } from '../99.core/interface/action.interface.js';
 import AudioBit from './fce/audio.bit.js';
 
@@ -7,16 +8,16 @@ export class InitAudio implements Action {
   constructor(public bale: AudioBit) {}
 }
 
-export const GENERATE_DUCKING_ENVELOPE = '[Audio action] Generate Ducking Envelope';
-export class GenerateDuckingEnvelope implements Action {
-  readonly type = GENERATE_DUCKING_ENVELOPE;
+export const UPDATE_AUDIO = '[Audio action] Update Audio';
+export class UpdateAudio implements Action {
+  readonly type = UPDATE_AUDIO;
   constructor(public bale: AudioBit) {}
 }
 
-export const WRITE_EXPOSURE_SHEET = '[Audio action] Write Exposure Sheet';
-export class WriteExposureSheet implements Action {
-  readonly type = WRITE_EXPOSURE_SHEET;
+export const ASSEMBLE_ACOUSTIC_EXPOSURE_SHEET = '[Audio action] Assemble Acoustic Exposure Sheet';
+export class AssembleAcousticExposureSheet implements Action {
+  readonly type = ASSEMBLE_ACOUSTIC_EXPOSURE_SHEET;
   constructor(public bale: AudioBit) {}
 }
 
-export type Actions = InitAudio | GenerateDuckingEnvelope | WriteExposureSheet;
+export type Actions = InitAudio | UpdateAudio | AssembleAcousticExposureSheet;

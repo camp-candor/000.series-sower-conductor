@@ -1,8 +1,12 @@
-import Audio, { AcousticPacingManifest } from './fce/audio.interface.js';
+// packages/400.conductor/32.audio.unit/audio.model.ts
+import Audio, {
+  ExposureSheetDocument,
+  ExposureSheetReceipt,
+} from './fce/audio.interface.js';
 
 export class AudioModel implements Audio {
-  idx: string = '32.audio.unit';
-  defaultDuckingFloorDb: number = -14.0;
-  totalEnvelopesGenerated: number = 0;
-  lastPacingManifest: AcousticPacingManifest | null = null;
+  idx: string = '32.audio';
+  isAssembling: boolean = false;
+  lastExposureSheet?: ExposureSheetDocument;
+  lastReceipt?: ExposureSheetReceipt;
 }
