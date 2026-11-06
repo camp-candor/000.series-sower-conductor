@@ -56,21 +56,80 @@ export async function stampStaticComposition(
     const ambientPath =
         options.ambientLoopPath || 'assets/audio/beds/bunker_hum_loop.wav'
 
-    const totalFrames = shots.reduce(
+    const maxShotFrame = shots.reduce(
         (acc, s) => Math.max(acc, s.fromFrame + s.durationFrames),
         0,
     )
+    const maxFoleyFrame = (options.foleyClips || []).reduce(
+        (acc, f) => Math.max(acc, f.fromFrame + f.durationInFrames),
+        0,
+    )
+    const totalFrames = Math.max(maxShotFrame, maxFoleyFrame)
     const duckExpression = calculateDuckVolumeExpression(shots)
 
-    const wrapperComponents = shots
-        .map((s, idx) => generateShotCameraWrapper(idx + 1, s))
-        .join('\n\n')
-    const sequenceNodes = shots
-        .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
-        .join('\n\n')
+    let bodyContent: string
+    if (options.audioOnly) {
+        const dialogueSequences = shots
+            .map(
+                (s) => `          {/* Track 1: Dialogue Sequence */}
+          <Sequence from={${s.fromFrame}} durationInFrames={${s.durationFrames}}>
+            <Audio src={staticFile('${s.audioWavPath}')} />
+          </Sequence>`,
+            )
+            .join('\n\n')
 
-    // Construct raw TSX body with raw unquoted numeric literals
-    const bodyContent = `
+        const foleySequences = (options.foleyClips || [])
+            .map(
+                (f) => `          {/* Track 2: Foley Sequence (${f.clipId}) */}
+          <Sequence from={${f.fromFrame}} durationInFrames={${f.durationInFrames}}>
+            <Audio src={staticFile('${f.foleyPath}')} volume={${f.volumeLinear}} />
+          </Sequence>`,
+            )
+            .join('\n\n')
+
+        const trackNodes = [
+            `          {/* Track 3: Ambient Bed with Automatic Speech Ducking (-14.0 dB) */}
+          <Audio
+            src={staticFile('${ambientPath}')}
+            volume={${duckExpression}}
+            loop
+          />`,
+            dialogueSequences,
+            foleySequences,
+        ]
+            .filter(Boolean)
+            .join('\n\n')
+
+        bodyContent = `
+import React from 'react';
+import { Composition, Sequence, Audio, staticFile } from 'remotion';
+
+export const Master_${sceneId}: React.FC = () => {
+  return (
+    <Composition
+      id="${sceneId}"
+      durationInFrames={${totalFrames}}
+      fps={24}
+      width={1920}
+      height={1080}
+      component={() => (
+        <>
+${trackNodes}
+        </>
+      )}
+    />
+  );
+};
+`.trim()
+    } else {
+        const wrapperComponents = shots
+            .map((s, idx) => generateShotCameraWrapper(idx + 1, s))
+            .join('\n\n')
+        const sequenceNodes = shots
+            .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
+            .join('\n\n')
+
+        bodyContent = `
 import React from 'react';
 import { Composition, Sequence, Audio, Img, Video, staticFile, useCurrentFrame, interpolate } from 'remotion';
 
@@ -99,6 +158,7 @@ ${sequenceNodes}
   );
 };
 `.trim()
+    }
 
     // Normalize LF line endings and compute SHA-256 body checksum
     const normalizedBody = bodyContent.replace(/\r\n/g, '\n')

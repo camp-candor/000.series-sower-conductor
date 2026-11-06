@@ -22,5 +22,5 @@ export {
     mulberry32,
     matchActionLinesToFoleyPlacements,
     mergeCloseSpeechWindows,
-    compileParallaxExposureSheet
+    compileParallaxExposureSheet,
 } from './buz/foleyMatcher.buzz.js'

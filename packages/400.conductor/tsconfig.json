@@ -1,6 +1,7 @@
 {
     "extends": "../../apps/995.library/tsconfig-base.json",
     "compilerOptions": {
+        "jsx": "react-jsx",
         "module": "ESNext",
         "outDir": "./dist",
         "rootDir": "./",

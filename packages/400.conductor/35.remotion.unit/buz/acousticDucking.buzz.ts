@@ -158,6 +158,7 @@ ${foleySequences}
       <Audio
         src={staticFile(${JSON.stringify(plan.ambientBedPath)})}
         volume={baseAmbientVolume * activeGain}
+        loop
       />
     </>
   );

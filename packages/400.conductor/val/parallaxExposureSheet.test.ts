@@ -12,17 +12,35 @@ import * as path from 'node:path'
 describe('Parallax Exposure Sheet', () => {
     it('should deterministically match all 9 Parallax Dinner Foley cues from action prose', () => {
         const actionLines = [
-            { text: "South Georgia rain squall beats against the window.", frameOffset: 0 },
-            { text: "Peterbilt 379 diesel idling outside.", frameOffset: 150 },
-            { text: "The hydraulic diner door hiss sounds as he enters.", frameOffset: 300 },
-            { text: "He slides into the booth, a sharp booth creak.", frameOffset: 450 },
-            { text: "Waitress drops the laminated menu (menu drop).", frameOffset: 600 },
-            { text: "She does a coffee pour.", frameOffset: 750 },
-            { text: "He rips open an isopropyl wipe tear.", frameOffset: 900 },
-            { text: "A metallic trial lens click echoes.", frameOffset: 1050 },
-            { text: "A roaring logging semi pass shakes the diner.", frameOffset: 1200 }
+            {
+                text: 'South Georgia rain squall beats against the window.',
+                frameOffset: 0,
+            },
+            { text: 'Peterbilt 379 diesel idling outside.', frameOffset: 150 },
+            {
+                text: 'The hydraulic diner door hiss sounds as he enters.',
+                frameOffset: 300,
+            },
+            {
+                text: 'He slides into the booth, a sharp booth creak.',
+                frameOffset: 450,
+            },
+            {
+                text: 'Waitress drops the laminated menu (menu drop).',
+                frameOffset: 600,
+            },
+            { text: 'She does a coffee pour.', frameOffset: 750 },
+            { text: 'He rips open an isopropyl wipe tear.', frameOffset: 900 },
+            { text: 'A metallic trial lens click echoes.', frameOffset: 1050 },
+            {
+                text: 'A roaring logging semi pass shakes the diner.',
+                frameOffset: 1200,
+            },
         ]
-        const placements = matchActionLinesToFoleyPlacements('ep01_sc01', actionLines)
+        const placements = matchActionLinesToFoleyPlacements(
+            'ep01_sc01',
+            actionLines,
+        )
         expect(placements).toHaveLength(9)
         expect(placements[0].cue_name).toBe('rain_squall')
         expect(placements[1].cue_name).toBe('diesel_idle')
@@ -37,11 +55,14 @@ describe('Parallax Exposure Sheet', () => {
 
     it('should apply :retry1 anti-clustering when identical cues are triggered within < 120 frames', () => {
         const actionLines = [
-            { text: "A rain squall begins.", frameOffset: 0 },
-            { text: "More rain squall.", frameOffset: 50 },
-            { text: "Even more rain squall.", frameOffset: 100 }
+            { text: 'A rain squall begins.', frameOffset: 0 },
+            { text: 'More rain squall.', frameOffset: 50 },
+            { text: 'Even more rain squall.', frameOffset: 100 },
         ]
-        const placements = matchActionLinesToFoleyPlacements('ep01_sc01', actionLines)
+        const placements = matchActionLinesToFoleyPlacements(
+            'ep01_sc01',
+            actionLines,
+        )
         expect(placements).toHaveLength(3)
         // Verify distinct samples
         const sample1 = placements[0].resolved_sample
@@ -56,7 +77,7 @@ describe('Parallax Exposure Sheet', () => {
         const windows = [
             { startFrame: 10, endFrame: 50 },
             { startFrame: 60, endFrame: 100 }, // Gap of 10
-            { startFrame: 120, endFrame: 150 } // Gap of 20
+            { startFrame: 120, endFrame: 150 }, // Gap of 20
         ]
         const merged = mergeCloseSpeechWindows(windows, 18)
         expect(merged).toHaveLength(2)
