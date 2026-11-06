@@ -38,9 +38,9 @@ export function synthesizeStaticCompositionTsx(
         string,
         'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE'
     >,
-    audioPlan?: MultiTrackAudioPlan,
+    audioPlan?: MultiTrackAudioPlan, audioOnly = false
 ): string {
-    const shotComponents = shots
+    const shotComponents = audioOnly ? "" : shots
         .map((s, idx) => {
             const mode =
                 kinematicsModes?.[s.shotId] ||
@@ -58,7 +58,7 @@ export function synthesizeStaticCompositionTsx(
         })
         .join('\n\n')
 
-    const sequences = shots
+    const sequences = audioOnly ? "" : shots
         .map((s, idx) => {
             const compName = `Shot${(idx + 1).toString().padStart(2, '0')}CameraWrapper`
             const from = formatUnquotedLiteral(s.fromFrame)
@@ -90,9 +90,9 @@ export function synthesizeStaticCompositionTsx(
 // Static Source-Baked Master Composition
 // Zero dynamic runtime evaluation. Pure literal coordinates.
 import React from 'react';
-import { Composition, Sequence, OffthreadVideo, Img, Audio, staticFile, useCurrentFrame, interpolate, spring } from 'remotion';
+${audioOnly ? "import { Composition, Sequence, Audio, staticFile, useCurrentFrame } from \'remotion\';" : "import { Composition, Sequence, OffthreadVideo, Img, Audio, staticFile, useCurrentFrame, interpolate, spring } from \'remotion\';" }
 
-${generateDespillSvgFilter()}
+${audioOnly ? "" : generateDespillSvgFilter()}
 
 ${shotComponents}
 

@@ -62,17 +62,25 @@ export async function stampStaticComposition(
     )
     const duckExpression = calculateDuckVolumeExpression(shots)
 
-    const wrapperComponents = shots
+    const wrapperComponents = options.audioOnly ? '' : shots
         .map((s, idx) => generateShotCameraWrapper(idx + 1, s))
         .join('\n\n')
-    const sequenceNodes = shots
+    const sequenceNodes = options.audioOnly ? shots
+        .map((s, idx) => `          {/* Track 1: Dialogue */}
+          <Sequence from={${s.fromFrame}} durationInFrames={${s.durationFrames}}>
+            <Audio src={staticFile('audio/dialogue/${s.speakerId}_${s.shotIndex}.wav')} />
+          </Sequence>`)
+        .join('\n\n') + (options.foleyClips && options.foleyClips.length > 0 ? '\n\n' + options.foleyClips.map((f) => `          {/* Track 2: Foley */}
+          <Sequence from={${f.fromFrame}} durationInFrames={${f.durationInFrames}}>
+            <Audio src={staticFile('${f.foleyPath}')} volume={${f.volumeLinear}} />
+          </Sequence>`).join('\n\n') : '') : shots
         .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
         .join('\n\n')
 
     // Construct raw TSX body with raw unquoted numeric literals
     const bodyContent = `
 import React from 'react';
-import { Composition, Sequence, Audio, Img, Video, staticFile, useCurrentFrame, interpolate } from 'remotion';
+import { Composition, Sequence, Audio, Img, Video, staticFile, useCurrentFrame, interpolate } from \'remotion\';
 
 ${wrapperComponents}
 

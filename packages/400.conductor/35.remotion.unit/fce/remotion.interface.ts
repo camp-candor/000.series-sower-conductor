@@ -22,6 +22,8 @@ export interface SceneShotPlan {
 }
 
 export interface StampCompositionOptions {
+    audioOnly?: boolean
+    foleyClips?: Array<{ clipId: string; foleyPath: string; fromFrame: number; durationInFrames: number; volumeLinear: number }>
     outputDirectory?: string
     upstreamAstHash?: string
     ambientLoopPath?: string
