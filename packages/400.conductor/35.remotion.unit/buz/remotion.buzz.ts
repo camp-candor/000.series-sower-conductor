@@ -39,8 +39,9 @@ export function synthesizeStaticCompositionTsx(
         'STATIC' | 'SLOW_PUSH_IN' | 'CRASH_ZOOM' | 'IMPACT_SHAKE'
     >,
     audioPlan?: MultiTrackAudioPlan,
+    audioOnly = false
 ): string {
-    const shotComponents = shots
+    const shotComponents = audioOnly ? "" : shots
         .map((s, idx) => {
             const mode =
                 kinematicsModes?.[s.shotId] ||
@@ -50,17 +51,21 @@ export function synthesizeStaticCompositionTsx(
                 shotId: s.shotId,
                 mode,
                 stageX: 960,
-                stageY: 850,
-                localAnchorX: 512,
-                localAnchorY: 800,
+                stageY: 1080,
+                baseScale: 1.0,
+                targetScale: 1.05,
             })
-            return generateShotComponentCode(s, idx, cameraSpec)
+            return generateShotComponentCode(
+                `Shot${String(idx + 1).padStart(2, '0')}`,
+                s,
+                cameraSpec,
+            )
         })
         .join('\n\n')
 
-    const sequences = shots
+    const sequences = audioOnly ? "" : shots
         .map((s, idx) => {
-            const compName = `Shot${(idx + 1).toString().padStart(2, '0')}CameraWrapper`
+            const compName = `Shot${String(idx + 1).padStart(2, '0')}CameraWrapper`
             const from = formatUnquotedLiteral(s.fromFrame)
             const dur = formatUnquotedLiteral(s.deliveryFrames)
             return `      <Sequence from={${from}} durationInFrames={${dur}}>\n        <${compName} />\n      </Sequence>`
@@ -90,9 +95,9 @@ export function synthesizeStaticCompositionTsx(
 // Static Source-Baked Master Composition
 // Zero dynamic runtime evaluation. Pure literal coordinates.
 import React from 'react';
-import { Composition, Sequence, OffthreadVideo, Img, Audio, staticFile, useCurrentFrame, interpolate, spring } from 'remotion';
+${audioOnly ? "import { Composition, Sequence, Audio, staticFile, useCurrentFrame, interpolate, spring } from 'remotion';" : "import { Composition, Sequence, OffthreadVideo, Img, Audio, staticFile, useCurrentFrame, interpolate, spring } from 'remotion';"}
 
-${generateDespillSvgFilter()}
+${audioOnly ? '' : generateDespillSvgFilter()}
 
 ${shotComponents}
 

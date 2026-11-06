@@ -62,10 +62,26 @@ export async function stampStaticComposition(
     )
     const duckExpression = calculateDuckVolumeExpression(shots)
 
-    const wrapperComponents = shots
+    const wrapperComponents = options.audioOnly ? '' : shots
         .map((s, idx) => generateShotCameraWrapper(idx + 1, s))
         .join('\n\n')
-    const sequenceNodes = shots
+    const foleyNodes = (options.foleyClips || []).map((f) => {
+        return `          {/* Track 2: Foley Sequence */}
+          <Sequence from={${f.fromFrame}} durationInFrames={${f.durationInFrames}}>
+            <Audio src={staticFile('${f.foleyPath}')} volume={${f.volumeLinear}} />
+          </Sequence>`;
+    }).join('\n\n');
+
+    const dialogueNodes = shots.map((s) => {
+        return `          {/* Track 1: Dialogue Sequence */}
+          <Sequence from={${s.fromFrame}} durationInFrames={${s.durationFrames}}>
+            <Audio src={staticFile('${s.audioWavPath}')} />
+          </Sequence>`;
+    }).join('\n\n');
+
+    const sequenceNodes = options.audioOnly ? `${dialogueNodes}
+
+${foleyNodes}` : shots
         .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
         .join('\n\n')
 

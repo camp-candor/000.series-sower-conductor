@@ -25,6 +25,8 @@ export interface StampCompositionOptions {
     outputDirectory?: string
     upstreamAstHash?: string
     ambientLoopPath?: string
+    audioOnly?: boolean
+    foleyClips?: Array<{ clipId: string; foleyPath: string; fromFrame: number; durationInFrames: number; volumeLinear: number }>
 }
 
 export interface StampCompositionReceipt {
