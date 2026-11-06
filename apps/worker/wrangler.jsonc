@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "worker-sower-conductor",
+  "name": "series-sower-conductor-edge",
   "main": "src/index.ts",
-  "compatibility_date": "2026-11-01",
+  "compatibility_date": "2026-03-01",
   "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [
       {
-        "name": "SHOT_COORDINATOR",
+        "name": "SHOT_COORDINATOR_DO",
         "class_name": "ShotCoordinatorDO"
       }
     ]
@@ -21,7 +21,7 @@
   "d1_databases": [
     {
       "binding": "CANON_DB",
-      "database_name": "series_canon_db",
+      "database_name": "series_sower_canon",
       "database_id": "00000000-0000-0000-0000-000000000000"
     }
   ]
