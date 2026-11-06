@@ -4,27 +4,589 @@
     "sequence_index": 0,
     "state_snapshot_hash": "1111111111111111111111111111111111111111111111111111111111111111",
     "pinned_fact_version": 1,
-    "environment_id": "env_bunker",
+    "environment_id": "env_diner",
     "camera_framing": {
-        "shot_type": "CLOSE_UP",
-        "focal_entity_id": "char_bog"
+        "shot_type": "MEDIUM_SHOT",
+        "focal_entity_id": "char_johnny_walkman",
+        "secondary_entity_id": "char_orbie_mayhaw"
     },
     "lines": [
         {
             "line_id": "line_001",
-            "speaker_id": "char_bog",
-            "dialogue_clean_ascii": "Seal the hatch.",
-            "emotional_tag": "COLD_RESENTMENT",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Miss Beverly, do you copy?",
+            "emotional_tag": "NEUTRAL",
             "somatic_dsp": {
-                "gain_attenuation_bps": 1200,
-                "pitch_shift_cents": -50,
-                "breathiness_bps": 3400,
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
                 "ducking_depth_db": -14
             },
             "mru_directive": {
                 "mru_phase": "RATIONAL_ACTION",
-                "stimulus_id": "stim_door",
-                "intensity_bps": 4500
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_002",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "I copy, Walkman.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_003",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "We have a situation.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_004",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Specify the situation.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_005",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "The dinner is burnt.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_006",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Then we eat it burnt.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_007",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Are you sure?",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_008",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Yes.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_009",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Understood.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_010",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Good.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_011",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Over and out.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_012",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Out.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_013",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Crazy.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_014",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "I heard that.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_015",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Sorry.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_016",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "It's fine.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_017",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Okay.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_018",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Okay.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_019",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Right.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_020",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Right.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_021",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Yeah.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_022",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Yeah.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_023",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Sure.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_024",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Sure.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_025",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Fine.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_026",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Fine.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_027",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Done.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_028",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Done.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_029",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "One.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_030",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Two.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_031",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Three.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_032",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Four.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_033",
+            "speaker_id": "char_johnny_walkman",
+            "dialogue_clean_ascii": "Five.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
+            }
+        },
+        {
+            "line_id": "line_034",
+            "speaker_id": "char_orbie_mayhaw",
+            "dialogue_clean_ascii": "Six.",
+            "emotional_tag": "NEUTRAL",
+            "somatic_dsp": {
+                "gain_attenuation_bps": 0,
+                "pitch_shift_cents": 0,
+                "breathiness_bps": 0,
+                "ducking_depth_db": -14
+            },
+            "mru_directive": {
+                "mru_phase": "RATIONAL_ACTION",
+                "stimulus_id": "stim_default",
+                "intensity_bps": 1000
             }
         }
     ]
