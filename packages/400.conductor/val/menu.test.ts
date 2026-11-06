@@ -38,7 +38,7 @@ describe('packages/400.conductor Phase 11: Blessed Terminal Flight Deck Control 
     const model = new MenuModel();
     let resolvedBit: any = null;
 
-    const action = new ActMnu.RunLifecycleMenu({
+    const action = new ActMnu.InitMenu({
       idx: 'test-action',
       slv: (res: any) => { resolvedBit = res; },
     });

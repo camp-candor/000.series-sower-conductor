@@ -1,11 +1,30 @@
-import { Model } from '../../99.core/interface/model.interface.js'
+export interface GridCoordinates {
+  x: number;
+  y: number;
+  xSpan: number;
+  ySpan: number;
+}
 
-export default interface Menu extends Model {
-    idx: string
-    activeSelection: string
-    lastActionTimestamp: number
-    statusMessage: string
-    lastRemotionReceipt: string | null
-    lastEdgeReceipt: string | null
-    lastLifecycleReceipt: string | null
+export interface MenuChoiceItem {
+  id: string;
+  label: string;
+  tooltip: string;
+  actionType: string;
+}
+
+export interface CockpitTelemetryPacket {
+  timestamp: string;
+  subsystem: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS';
+  message: string;
+}
+
+export default interface Menu {
+  idx: string;
+  activeSelection: string;
+  lastActionTimestamp: number;
+  statusMessage: string;
+  gridLeft: GridCoordinates;
+  gridRight: GridCoordinates;
+  menuChoices: MenuChoiceItem[];
 }
