@@ -8,7 +8,8 @@ export type MasterSceneStage =
   | 'STAGE_6_METAPROGRAM_STAMPED'
   | 'STAGE_7_OPTICAL_PRINTED'
   | 'STAGE_8_PROVENANCE_SEALED'
-  | 'STAGE_FAILED_DLQ';
+  | 'STAGE_FAILED_DLQ'
+  | 'STAGE_ESCALATED_HUMAN_REVIEW';
 
 export interface ShotLifecycleItem {
   shotId: string;
@@ -34,6 +35,7 @@ export interface MasterSceneLifecycleContext {
   outputDeliverablePath: string | null;
   lockfileSha256: string | null;
   vramUsedMb: 0;
+  t0Spend: '$0.00';
   t4Spend: '$0.00';
   attemptCount: number;
   maxAttempts: number;
@@ -48,6 +50,7 @@ export interface MeuRepairDecision {
   affectedBeats: number;
   totalBeats: number;
   reason: string;
+  shouldHalt: boolean;
 }
 
 export interface CircuitBreakerResult {
@@ -56,4 +59,12 @@ export interface CircuitBreakerResult {
   currentAttempt: number;
   maxAttempts: number;
   error: string;
+}
+
+export default interface Lifecycle {
+  idx: string;
+  activeSceneId: string;
+  stage: MasterSceneStage;
+  lastMasterContext: MasterSceneLifecycleContext | null;
+  lastActionTimestamp: number;
 }
