@@ -31,6 +31,8 @@ const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         '>> [TOOLTIP] Validate closed Zod schema and 7-bit clean ASCII parity against drafts/dialogue_ast.json ($T_0 = $0.00).',
     'INSPECT CHARACTER SOMATIC DSP':
         '>> [TOOLTIP] Convert physical fatigue and trauma metrics into continuous DSP modifiers.',
+    'QUANTIZE ACOUSTIC MASTER CLOCK':
+        '>> [TOOLTIP] Quantize continuous acoustic duration into discrete 24 fps frames with cumulative zero-drift alignment and causal 4n+1 VAE allocations.',
     'SYNTHESIZE SCENE AUDIO STEMS':
         '>> [TOOLTIP] Spawn ephemeral Python synthesize.py with Zero-VRAM invariant on Rig 1.',
     'SEAL UNIVERSAL PROVENANCE LOCKFILE':
@@ -112,6 +114,7 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
         'AUDIT REMOTION COMPOSITION AST',
         'AUDIT DIALOGUE AST CONTRACT',
         'INSPECT CHARACTER SOMATIC DSP',
+        'QUANTIZE ACOUSTIC MASTER CLOCK',
         'SYNTHESIZE SCENE AUDIO STEMS',
         'SEAL UNIVERSAL PROVENANCE LOCKFILE',
         'VERIFY RIG 1 HARDWARE ZERO-VRAM',
