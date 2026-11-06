@@ -13,41 +13,10 @@ export class UpdateLifecycle implements Action {
   constructor(public bale: LifecycleBit) {}
 }
 
-export const RUN_INCEPTION_PREFLIGHT = '[Lifecycle action] Run Inception Preflight';
-export class RunInceptionPreflight implements Action {
-  readonly type = RUN_INCEPTION_PREFLIGHT;
-  constructor(public bale: LifecycleBit) {}
-}
-
-export const QUANTIZE_ACOUSTIC_CLOCK = '[Lifecycle action] Quantize Acoustic Clock';
-export class QuantizeAcousticClock implements Action {
-  readonly type = QUANTIZE_ACOUSTIC_CLOCK;
-  constructor(public bale: LifecycleBit) {}
-}
-
-export const CONFORM_DIFFUSION_LATTICE = '[Lifecycle action] Conform Diffusion Lattice';
-export class ConformDiffusionLattice implements Action {
-  readonly type = CONFORM_DIFFUSION_LATTICE;
-  constructor(public bale: LifecycleBit) {}
-}
-
-export const SEAL_PROVENANCE_LEDGER = '[Lifecycle action] Seal Provenance Ledger';
-export class SealProvenanceLedger implements Action {
-  readonly type = SEAL_PROVENANCE_LEDGER;
-  constructor(public bale: LifecycleBit) {}
-}
-
 export const CHAIN_MASTER_SCENE_LIFECYCLE = '[Lifecycle action] Chain Master Scene Lifecycle';
 export class ChainMasterSceneLifecycle implements Action {
   readonly type = CHAIN_MASTER_SCENE_LIFECYCLE;
   constructor(public bale: LifecycleBit) {}
 }
 
-export type Actions =
-  | InitLifecycle
-  | UpdateLifecycle
-  | RunInceptionPreflight
-  | QuantizeAcousticClock
-  | ConformDiffusionLattice
-  | SealProvenanceLedger
-  | ChainMasterSceneLifecycle;
+export type Actions = InitLifecycle | UpdateLifecycle | ChainMasterSceneLifecycle;

@@ -5,7 +5,7 @@ import {
 
 export function evaluateFailureEscalation(
   ctx: MasterSceneLifecycleContext,
-  error: Error
+  error: Error,
 ): CircuitBreakerResult {
   ctx.attemptCount++;
   ctx.lastError = error.message;
