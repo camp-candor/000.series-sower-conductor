@@ -2,17 +2,17 @@ import ConductorUnit from './00.conductor.unit/conductor.unit.js'
 import LogisticUnit from './04.logistic.unit/logistic.unit.js'
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js'
 import SpeechUnit from './09.speech.unit/speech.unit.js'
-import Speech from './09.speech.unit/fce/speech.interface.js';
-import { SpeechModel } from './09.speech.unit/speech.model.js';
+import Speech from './09.speech.unit/fce/speech.interface.js'
+import { SpeechModel } from './09.speech.unit/speech.model.js'
 
-import SomaticdspUnit from './10.somaticdsp.unit/somaticdsp.unit.js';
-import Somaticdsp from './10.somaticdsp.unit/fce/somaticdsp.interface.js';
-import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js';
-import { reducer as somaticdspReducer } from './10.somaticdsp.unit/somaticdsp.reduce.js';
+import SomaticdspUnit from './10.somaticdsp.unit/somaticdsp.unit.js'
+import Somaticdsp from './10.somaticdsp.unit/fce/somaticdsp.interface.js'
+import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js'
+import { reducer as somaticdspReducer } from './10.somaticdsp.unit/somaticdsp.reduce.js'
 import LedgerUnit from './21.ledger.unit/ledger.unit.js'
 import FrameUnit from './24.frame.unit/frame.unit.js'
-import Frame from './24.frame.unit/fce/frame.interface.js';
-import { FrameModel } from './24.frame.unit/frame.model.js';
+import Frame from './24.frame.unit/fce/frame.interface.js'
+import { FrameModel } from './24.frame.unit/frame.model.js'
 import VramUnit from './26.vram.unit/vram.unit.js'
 import CudaUnit from './27.cuda.unit/cuda.unit.js'
 import CpusUnit from './28.cpus.unit/cpus.unit.js'
@@ -101,7 +101,7 @@ export default class UnitData implements Model {
   logistic: any;
   sqlite: any;
   speech: Speech = new SpeechModel();
-  somaticdsp: Somaticdsp = new SomaticdspModel();
+  somaticdsp: any;
   ledger: any;
   frame: Frame = new FrameModel();
   vram: any;

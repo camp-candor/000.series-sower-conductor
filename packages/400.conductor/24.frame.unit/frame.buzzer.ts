@@ -1,9 +1,9 @@
 export {
-  initFrame,
-  updateFrame,
-  quantizeAcousticClock,
-  extractDurationMsViaFfprobe,
-  calculateCausalVaeAllocation,
-  quantizeShotTimeline,
-  SAMPLES_PER_FRAME,
-} from './buz/frame.buzz.js';
+    initFrame,
+    updateFrame,
+    quantizeAcousticClock,
+    extractDurationMsViaFfprobe,
+    calculateCausalVaeAllocation,
+    quantizeShotTimeline,
+    SAMPLES_PER_FRAME,
+} from './buz/frame.buzz.js'

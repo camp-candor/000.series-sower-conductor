@@ -412,24 +412,27 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
             return cpy
         }
 
-
-        case 'QUANTIZE ACOUSTIC MASTER CLOCK':
-            bit = await ste.hunt('[Frame action] Quantize Acoustic Clock', {
-                dat: {
-                    stems: [
-                        { shot_id: 'sh01', duration_ms: 3120 },
-                        { shot_id: 'sh02', duration_ms: 1840 },
-                        { shot_id: 'sh03', duration_ms: 2400 },
-                    ],
+        case 'QUANTIZE ACOUSTIC MASTER CLOCK': {
+            const bit = await ste.hunt(
+                '[Frame action] Quantize Acoustic Clock',
+                {
+                    dat: {
+                        stems: [
+                            { shot_id: 'sh01', duration_ms: 3120 },
+                            { shot_id: 'sh02', duration_ms: 1840 },
+                            { shot_id: 'sh03', duration_ms: 2400 },
+                        ],
+                    },
                 },
-            });
+            )
             if (bit?.frmBit?.dat?.receipt?.ok) {
                 await global.LIBRARY.hunt('[Console action] Update Console', {
                     idx: 'cns00',
                     src: '>> [MENU:FRAME] Acoustic clock quantized cleanly with zero drift.',
-                });
+                })
             }
-            break;
+            break
+        }
 
         default:
             break
