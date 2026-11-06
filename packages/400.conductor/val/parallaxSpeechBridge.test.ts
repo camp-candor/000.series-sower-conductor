@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import * as crypto from 'node:crypto'
 import {
     verifyNonSilentWavPcm,
-    synthesizeSingleLineWithRetry
+    synthesizeSingleLineWithRetry,
 } from '../09.speech.unit/buz/speech.buzz.js'
 import { DialogueSynthesisItem } from '../09.speech.unit/fce/speech.interface.js'
 
@@ -25,7 +25,12 @@ describe('Feature 7.1: Parallax Speech Bridge (Zero-VRAM Somatic Synthesis)', ()
         }
     })
 
-    const generateTestItem = (speaker_id: string, text: string, pitch = 0, fry = 0): DialogueSynthesisItem => ({
+    const generateTestItem = (
+        speaker_id: string,
+        text: string,
+        pitch = 0,
+        fry = 0,
+    ): DialogueSynthesisItem => ({
         line_id: crypto.randomBytes(4).toString('hex'),
         speaker_id,
         dialogue_text: text,
@@ -38,13 +43,22 @@ describe('Feature 7.1: Parallax Speech Bridge (Zero-VRAM Somatic Synthesis)', ()
             effective_vocal_fry_density: fry,
             target_lufs: -16.0,
             peak_dbtp: -1.0,
-            banned_cadences: []
-        }
+            banned_cadences: [],
+        },
     })
 
     it('synthesizes non-silent valid RIFF/WAVE for Johnny Walkman', async () => {
-        const item = generateTestItem('char_johnny_walkman', 'Hello, this is a test.')
-        const receipt = await synthesizeSingleLineWithRetry(item, testOutputDir, 'styletts2', 'parallax', 'sc01')
+        const item = generateTestItem(
+            'char_johnny_walkman',
+            'Hello, this is a test.',
+        )
+        const receipt = await synthesizeSingleLineWithRetry(
+            item,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
 
         expect(receipt.ok).toBe(true)
         expect(fs.existsSync(receipt.target_path)).toBe(true)
@@ -56,8 +70,17 @@ describe('Feature 7.1: Parallax Speech Bridge (Zero-VRAM Somatic Synthesis)', ()
     }, 20000)
 
     it('synthesizes non-silent valid RIFF/WAVE for Orbie Mayhaw', async () => {
-        const item = generateTestItem('char_orbie_mayhaw', 'Fascinating hypothesis.')
-        const receipt = await synthesizeSingleLineWithRetry(item, testOutputDir, 'styletts2', 'parallax', 'sc01')
+        const item = generateTestItem(
+            'char_orbie_mayhaw',
+            'Fascinating hypothesis.',
+        )
+        const receipt = await synthesizeSingleLineWithRetry(
+            item,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
 
         expect(receipt.ok).toBe(true)
         const verification = verifyNonSilentWavPcm(receipt.target_path)
@@ -66,15 +89,59 @@ describe('Feature 7.1: Parallax Speech Bridge (Zero-VRAM Somatic Synthesis)', ()
     }, 20000)
 
     it('produces distinct SHA-256 for different somatic DSP modifiers', async () => {
-        const itemA = generateTestItem('char_johnny_walkman', 'Deterministic text.', 0.0, 0.0)
-        const itemB = generateTestItem('char_johnny_walkman', 'Deterministic text.', 1.0, 0.0)
-        const itemC = generateTestItem('char_johnny_walkman', 'Deterministic text.', 0.0, 1.0)
-        const itemD = generateTestItem('char_johnny_walkman', 'Deterministic text.', 0.0, 0.0)
+        const itemA = generateTestItem(
+            'char_johnny_walkman',
+            'Deterministic text.',
+            0.0,
+            0.0,
+        )
+        const itemB = generateTestItem(
+            'char_johnny_walkman',
+            'Deterministic text.',
+            1.0,
+            0.0,
+        )
+        const itemC = generateTestItem(
+            'char_johnny_walkman',
+            'Deterministic text.',
+            0.0,
+            1.0,
+        )
+        const itemD = generateTestItem(
+            'char_johnny_walkman',
+            'Deterministic text.',
+            0.0,
+            0.0,
+        )
 
-        const recA = await synthesizeSingleLineWithRetry(itemA, testOutputDir, 'styletts2', 'parallax', 'sc01')
-        const recB = await synthesizeSingleLineWithRetry(itemB, testOutputDir, 'styletts2', 'parallax', 'sc01')
-        const recC = await synthesizeSingleLineWithRetry(itemC, testOutputDir, 'styletts2', 'parallax', 'sc01')
-        const recD = await synthesizeSingleLineWithRetry(itemD, testOutputDir, 'styletts2', 'parallax', 'sc01')
+        const recA = await synthesizeSingleLineWithRetry(
+            itemA,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
+        const recB = await synthesizeSingleLineWithRetry(
+            itemB,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
+        const recC = await synthesizeSingleLineWithRetry(
+            itemC,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
+        const recD = await synthesizeSingleLineWithRetry(
+            itemD,
+            testOutputDir,
+            'styletts2',
+            'parallax',
+            'sc01',
+        )
 
         expect(recA.sha256).not.toEqual(recB.sha256)
         expect(recA.sha256).not.toEqual(recC.sha256)

@@ -188,7 +188,8 @@ export const synthesizeSingleLineWithRetry = async (
                 .update(fileBuffer)
                 .digest('hex')
             const durationMs =
-                Math.round(((confirmedSize - 44) / (48000 * 1 * 2)) * 1000) || 1000
+                Math.round(((confirmedSize - 44) / (48000 * 1 * 2)) * 1000) ||
+                1000
 
             if (global.LIBRARY) {
                 await global.LIBRARY.hunt('[Console action] Update Console', {
@@ -369,11 +370,18 @@ export const executeSceneSpeech = async (
     return cpy
 }
 
-
-export const verifyNonSilentWavPcm = (filePath: string): { readonly ok: boolean; readonly rms: number; readonly peak: number; readonly sampleCount: number } => {
+export const verifyNonSilentWavPcm = (
+    filePath: string,
+): {
+    readonly ok: boolean
+    readonly rms: number
+    readonly peak: number
+    readonly sampleCount: number
+} => {
     try {
         const buffer = fs.readFileSync(filePath)
-        if (buffer.length <= 44) return { ok: false, rms: 0, peak: 0, sampleCount: 0 }
+        if (buffer.length <= 44)
+            return { ok: false, rms: 0, peak: 0, sampleCount: 0 }
         const dataBuffer = buffer.subarray(44)
         const sampleCount = dataBuffer.length / 2
         let sumSq = 0

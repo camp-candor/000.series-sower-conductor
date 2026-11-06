@@ -180,14 +180,16 @@ export function compileParallaxSceneAst(
     )
 
     const draftsPath = path.resolve(process.cwd(), 'drafts')
-    if (!fs.existsSync(draftsPath)) fs.mkdirSync(draftsPath, { recursive: true })
+    if (!fs.existsSync(draftsPath))
+        fs.mkdirSync(draftsPath, { recursive: true })
     fs.writeFileSync(
         path.join(draftsPath, 'dialogue_ast.json'),
         JSON.stringify(ast, null, 4),
     )
 
     const outputsPath = path.resolve(process.cwd(), 'outputs/ep01_sc01')
-    if (!fs.existsSync(outputsPath)) fs.mkdirSync(outputsPath, { recursive: true })
+    if (!fs.existsSync(outputsPath))
+        fs.mkdirSync(outputsPath, { recursive: true })
     fs.writeFileSync(
         path.join(outputsPath, 'dialogue_ast.json'),
         JSON.stringify(ast, null, 4),

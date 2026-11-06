@@ -9,8 +9,7 @@ export {
     verifyNonSilentWavPcm,
 } from './buz/speech.buzz.js'
 
-
 export {
     buildParallaxSpeechRequest,
-    executeParallaxSceneSpeech
+    executeParallaxSceneSpeech,
 } from './buz/parallaxSpeech.buzz.js'

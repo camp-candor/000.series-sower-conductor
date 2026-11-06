@@ -1,6 +1,7 @@
 import { ExtractedDialogueTurn } from '../fce/parity.interface.js'
 
-const CUE_EXTENSION_REGEX = /\s*\((?:CONT'D|CONT\u2019D|O\.S\.|V\.O\.|OFF)\)\s*$/i
+const CUE_EXTENSION_REGEX =
+    /\s*\((?:CONT'D|CONT\u2019D|O\.S\.|V\.O\.|OFF)\)\s*$/i
 const TITLE_HEADER_REGEX = /^(Title|Credit|Author|Draft date|Contact):/i
 
 export function normalizePunctuation(text: string): string {
@@ -92,7 +93,12 @@ export function parseFountainDialogue(
                 continue
             }
             // If we encounter a line that isn't a title header and isn't empty, we might not be in a title page
-            if (line.length > 0 && !TITLE_HEADER_REGEX.test(line) && !line.startsWith('===') && i > 5) {
+            if (
+                line.length > 0 &&
+                !TITLE_HEADER_REGEX.test(line) &&
+                !line.startsWith('===') &&
+                i > 5
+            ) {
                 inTitlePage = false
             }
             if (inTitlePage && TITLE_HEADER_REGEX.test(line)) {
@@ -101,10 +107,13 @@ export function parseFountainDialogue(
         }
 
         // If still in title page explicitly, skip
-        if (inTitlePage && (TITLE_HEADER_REGEX.test(line) || line.startsWith(' '))) {
+        if (
+            inTitlePage &&
+            (TITLE_HEADER_REGEX.test(line) || line.startsWith(' '))
+        ) {
             continue
         } else {
-             inTitlePage = false
+            inTitlePage = false
         }
 
         // Empty line terminates dialogue block
@@ -180,7 +189,11 @@ export function extractFountainActionLines(fountainText: string): string[] {
                 inTitlePage = false
                 continue
             }
-            if (TITLE_HEADER_REGEX.test(line) || line.length === 0 || line.startsWith(' ')) {
+            if (
+                TITLE_HEADER_REGEX.test(line) ||
+                line.length === 0 ||
+                line.startsWith(' ')
+            ) {
                 continue
             }
             inTitlePage = false

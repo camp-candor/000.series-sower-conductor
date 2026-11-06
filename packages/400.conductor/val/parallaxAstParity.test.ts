@@ -20,7 +20,7 @@ describe('Phase 1 Fountain Tokenizer Patch & Deterministic Parallax Dinner AST C
         compileParallaxSceneAst(PARALLAX_DINNER_FOUNTAIN_SOURCE)
     })
 
-    it('extracts all 34 spoken turns including (CONT\'D) cues', () => {
+    it("extracts all 34 spoken turns including (CONT'D) cues", () => {
         const turns = parseFountainDialogue(PARALLAX_DINNER_FOUNTAIN_SOURCE)
         expect(turns.length).toBe(34)
 
@@ -53,9 +53,12 @@ describe('Phase 1 Fountain Tokenizer Patch & Deterministic Parallax Dinner AST C
     it('confirms 0 mismatches via assertVerbatimParity', () => {
         const raw = JSON.parse(fs.readFileSync(draftsPath, 'utf8'))
         const parsed = SceneASTSchema.parse(raw)
-        const astLines = parsed.lines.map(l => l.dialogue_clean_ascii)
+        const astLines = parsed.lines.map((l) => l.dialogue_clean_ascii)
 
-        const report = assertVerbatimParity(PARALLAX_DINNER_FOUNTAIN_SOURCE, astLines)
+        const report = assertVerbatimParity(
+            PARALLAX_DINNER_FOUNTAIN_SOURCE,
+            astLines,
+        )
         expect(report.ok).toBe(true)
         expect(report.mismatches.length).toBe(0)
     })
@@ -63,22 +66,24 @@ describe('Phase 1 Fountain Tokenizer Patch & Deterministic Parallax Dinner AST C
     it('throws PARITY_COUNT_MISMATCH when a turn is omitted', () => {
         const raw = JSON.parse(fs.readFileSync(draftsPath, 'utf8'))
         const parsed = SceneASTSchema.parse(raw)
-        const astLines = parsed.lines.map(l => l.dialogue_clean_ascii)
+        const astLines = parsed.lines.map((l) => l.dialogue_clean_ascii)
 
         astLines.pop() // Omit a line
 
-        expect(() => assertVerbatimParity(PARALLAX_DINNER_FOUNTAIN_SOURCE, astLines))
-            .toThrowError(/PARITY_COUNT_MISMATCH/)
+        expect(() =>
+            assertVerbatimParity(PARALLAX_DINNER_FOUNTAIN_SOURCE, astLines),
+        ).toThrowError(/PARITY_COUNT_MISMATCH/)
     })
 
     it('throws PARITY_TEXT_MISMATCH when a single word is mutated', () => {
         const raw = JSON.parse(fs.readFileSync(draftsPath, 'utf8'))
         const parsed = SceneASTSchema.parse(raw)
-        const astLines = parsed.lines.map(l => l.dialogue_clean_ascii)
+        const astLines = parsed.lines.map((l) => l.dialogue_clean_ascii)
 
         astLines[0] = astLines[0] + ' mutation'
 
-        expect(() => assertVerbatimParity(PARALLAX_DINNER_FOUNTAIN_SOURCE, astLines))
-            .toThrowError(/PARITY_TEXT_MISMATCH/)
+        expect(() =>
+            assertVerbatimParity(PARALLAX_DINNER_FOUNTAIN_SOURCE, astLines),
+        ).toThrowError(/PARITY_TEXT_MISMATCH/)
     })
 })
