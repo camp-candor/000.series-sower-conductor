@@ -161,9 +161,10 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
     })
 
     describe('Level 4: Interactive Choice Switchboard & Remote Audio Pivot Traps', () => {
-        it('verifies complete 7-choice pipeline roster in CONDUCTOR_MENU_CHOICES', () => {
+        it('verifies complete 8-choice pipeline roster in CONDUCTOR_MENU_CHOICES', () => {
             const labels = Buzz.CONDUCTOR_MENU_CHOICES.map((c) => c.label)
             expect(labels).toEqual([
+                'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
                 'AUDIT DIALOGUE AST CONTRACT',
                 'INSPECT CHARACTER SOMATIC DSP',
                 'SYNTHESIZE SCENE AUDIO STEMS',

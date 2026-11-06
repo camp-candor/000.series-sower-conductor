@@ -1,5 +1,4 @@
 export const initVram = (cpy: VramModel, bal: VramBit, ste: State) => {
-
     return cpy
 }
 

@@ -1,5 +1,4 @@
 export const initEpisode = (cpy: EpisodeModel, bal: EpisodeBit, ste: State) => {
-
     return cpy
 }
 

@@ -3,7 +3,6 @@ export const initLogistics = (
     bal: LogisticsBit,
     ste: State,
 ) => {
-
     return cpy
 }
 

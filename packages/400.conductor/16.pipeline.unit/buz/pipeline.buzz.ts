@@ -3,7 +3,6 @@ export const initPipeline = (
     bal: PipelineBit,
     ste: State,
 ) => {
-
     return cpy
 }
 

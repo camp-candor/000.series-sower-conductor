@@ -3,7 +3,6 @@ export const initLifecycle = (
     bal: LifecycleBit,
     ste: State,
 ) => {
-
     return cpy
 }
 

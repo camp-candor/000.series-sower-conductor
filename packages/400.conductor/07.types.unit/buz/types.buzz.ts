@@ -1,5 +1,4 @@
 export const initTypes = (cpy: TypesModel, bal: TypesBit, ste: State) => {
-
     return cpy
 }
 

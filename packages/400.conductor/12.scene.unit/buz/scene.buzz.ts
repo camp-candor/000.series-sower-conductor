@@ -1,5 +1,4 @@
 export const initScene = (cpy: SceneModel, bal: SceneBit, ste: State) => {
-
     return cpy
 }
 

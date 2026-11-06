@@ -15,7 +15,8 @@ export const CONDUCTOR_MENU_CHOICES = [
     {
         id: 'CHOICE_MASTER_LIFECYCLE',
         label: 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
-        tooltip: 'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
+        tooltip:
+            'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
         actionType: '[Lifecycle action] Chain Master Scene Lifecycle',
     },
     {
@@ -203,14 +204,20 @@ export const updateMenu = async (
         switch (matchedChoice.id) {
             case 'CHOICE_MASTER_LIFECYCLE':
                 {
-                    const bit = await ste.hunt('[Lifecycle action] Chain Master Scene Lifecycle', {
-                        src: 'ep01_sc01',
-                    })
+                    const bit = await ste.hunt(
+                        '[Lifecycle action] Chain Master Scene Lifecycle',
+                        {
+                            src: 'ep01_sc01',
+                        },
+                    )
                     if (bit?.lfcBit?.val === 1) {
-                        await global.LIBRARY.hunt('[Console action] Update Console', {
-                            idx: 'cns00',
-                            src: '>> [MENU:LIFECYCLE] Master Scene Lifecycle finished successfully [OK]',
-                        })
+                        await global.LIBRARY.hunt(
+                            '[Console action] Update Console',
+                            {
+                                idx: 'cns00',
+                                src: '>> [MENU:LIFECYCLE] Master Scene Lifecycle finished successfully [OK]',
+                            },
+                        )
                     }
                 }
                 break

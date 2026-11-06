@@ -1,181 +1,198 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ShotCoordinatorDO } from '../../src/objects/ShotCoordinatorDO.js';
-import { FairQueue, ExecutionJob } from '../../src/queue/fairQueue.js';
+import { describe, it, expect, beforeEach } from 'vitest'
+import { ShotCoordinatorDO } from '../../src/objects/ShotCoordinatorDO.js'
+import { FairQueue, ExecutionJob } from '../../src/queue/fairQueue.js'
 
 describe('apps/worker Phase 8 Split-Brain Zombie Epoch & Concurrency Fencing Gauntlet', () => {
-  let mockStorage: Map<string, any>;
-  let coordinator: ShotCoordinatorDO;
+    let mockStorage: Map<string, any>
+    let coordinator: ShotCoordinatorDO
 
-  beforeEach(() => {
-    mockStorage = new Map();
+    beforeEach(() => {
+        mockStorage = new Map()
 
-    const mockCtx: any = {
-      blockConcurrencyWhile: async (fn: any) => fn(),
-      storage: {
-        get: async (key: string) => mockStorage.get(key),
-        put: async (key: string, val: any) => {
-          mockStorage.set(key, val);
-          if(key === 'current_epoch') {
-              (coordinator as any).currentEpoch = val;
-          }
-        },
-        delete: async (key: string) => mockStorage.delete(key),
-        setAlarm: async (_ms: number) => {},
-        deleteAlarm: async () => {},
-      },
-      acceptWebSocket: () => {},
-      getWebSockets: () => [],
-    };
-
-    coordinator = Object.create(ShotCoordinatorDO.prototype);
-    (coordinator as any).ctx = mockCtx;
-    (coordinator as any).env = {};
-    (coordinator as any).currentEpoch = 1;
-    (coordinator as any).activeLease = null;
-    (coordinator as any).idempotencyCache = new Map();
-    (coordinator as any).queue = new FairQueue();
-    (coordinator as any).ringBuffer = [];
-
-    // Mimic the blockConcurrencyWhile logic inside the real constructor
-    mockCtx.blockConcurrencyWhile(async () => {
-        const storedEpoch = await mockCtx.storage.get('current_epoch');
-        if (storedEpoch) {
-            (coordinator as any).currentEpoch = storedEpoch;
-        } else {
-            (coordinator as any).currentEpoch = 1;
-            await mockCtx.storage.put('current_epoch', (coordinator as any).currentEpoch);
+        const mockCtx: any = {
+            blockConcurrencyWhile: async (fn: any) => fn(),
+            storage: {
+                get: async (key: string) => mockStorage.get(key),
+                put: async (key: string, val: any) => {
+                    mockStorage.set(key, val)
+                    if (key === 'current_epoch') {
+                        ;(coordinator as any).currentEpoch = val
+                    }
+                },
+                delete: async (key: string) => mockStorage.delete(key),
+                setAlarm: async (_ms: number) => {},
+                deleteAlarm: async () => {},
+            },
+            acceptWebSocket: () => {},
+            getWebSockets: () => [],
         }
 
-        const active = await mockCtx.storage.get('active_lease');
-        if (active) {
-            (coordinator as any).activeLease = active;
-        }
-    });
-  });
+        coordinator = Object.create(ShotCoordinatorDO.prototype)
+        ;(coordinator as any).ctx = mockCtx
+        ;(coordinator as any).env = {}
+        ;(coordinator as any).currentEpoch = 1
+        ;(coordinator as any).activeLease = null
+        ;(coordinator as any).idempotencyCache = new Map()
+        ;(coordinator as any).queue = new FairQueue()
+        ;(coordinator as any).ringBuffer = []
 
-  it('rejects stale epoch heartbeats following watchdog timeout fence (HTTP 409)', async () => {
-    // 1. Worker claims lease under Epoch 1
-    const grantRes = await coordinator.fetch(
-      new Request('http://localhost/lease/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: 'j_partition_01', artistId: 'a1', ttlMs: 30000 }),
-      })
-    );
-    const data = await grantRes.json() as any;
-    const lease = data.lease;
-    expect(lease.epoch).toBeGreaterThan(0);
+        // Mimic the blockConcurrencyWhile logic inside the real constructor
+        mockCtx.blockConcurrencyWhile(async () => {
+            const storedEpoch = await mockCtx.storage.get('current_epoch')
+            if (storedEpoch) {
+                ;(coordinator as any).currentEpoch = storedEpoch
+            } else {
+                ;(coordinator as any).currentEpoch = 1
+                await mockCtx.storage.put(
+                    'current_epoch',
+                    (coordinator as any).currentEpoch,
+                )
+            }
 
-    // 2. Simulated network partition: 30s watchdog alarm fires, advancing epoch 1 -> 2
-    await coordinator.alarm();
+            const active = await mockCtx.storage.get('active_lease')
+            if (active) {
+                ;(coordinator as any).activeLease = active
+            }
+        })
+    })
 
-    // 3. Partitioned worker attempts to renew lease presenting stale Epoch 1
-    const hbRes = await coordinator.fetch(
-      new Request('http://localhost/lease/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaseId: lease.leaseId, epoch: lease.epoch }),
-      })
-    );
+    it('rejects stale epoch heartbeats following watchdog timeout fence (HTTP 409)', async () => {
+        // 1. Worker claims lease under Epoch 1
+        const grantRes = await coordinator.fetch(
+            new Request('http://localhost/lease/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jobId: 'j_partition_01',
+                    artistId: 'a1',
+                    ttlMs: 30000,
+                }),
+            }),
+        )
+        const data = (await grantRes.json()) as any
+        const lease = data.lease
+        expect(lease.epoch).toBeGreaterThan(0)
 
-    expect(hbRes.status).toBe(409);
-    const hbData = await hbRes.json() as any;
-    expect(hbData.ok).toBe(false);
-    expect(hbData.error.code).toBe('ZOMBIE_LEASE_EPOCH');
-    expect(hbData.error.currentEpoch).toBeGreaterThan(lease.epoch);
-  });
+        // 2. Simulated network partition: 30s watchdog alarm fires, advancing epoch 1 -> 2
+        await coordinator.alarm()
 
-  it('rejects late render completion from partitioned worker presenting stale epoch (HTTP 409)', async () => {
-    // 1. Worker claims lease under Epoch 1
-    const grantRes = await coordinator.fetch(
-      new Request('http://localhost/lease/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: 'j_zombie_render', artistId: 'a1', ttlMs: 30000 }),
-      })
-    );
-    const data = await grantRes.json() as any;
-    const lease = data.lease;
+        // 3. Partitioned worker attempts to renew lease presenting stale Epoch 1
+        const hbRes = await coordinator.fetch(
+            new Request('http://localhost/lease/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    leaseId: lease.leaseId,
+                    epoch: lease.epoch,
+                }),
+            }),
+        )
 
-    // 2. Coordinator aborts or revokes lease, incrementing monotonic epoch
-    await coordinator.fetch(
-      new Request('http://localhost/lease/abort', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaseId: lease.leaseId }),
-      })
-    );
+        expect(hbRes.status).toBe(409)
+        const hbData = (await hbRes.json()) as any
+        expect(hbData.ok).toBe(false)
+        expect(hbData.error.code).toBe('ZOMBIE_LEASE_EPOCH')
+        expect(hbData.error.currentEpoch).toBeGreaterThan(lease.epoch)
+    })
 
-    // 3. Stale worker finishes rendering and attempts to commit completion with Epoch 1
-    const compRes = await coordinator.fetch(
-      new Request('http://localhost/lease/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaseId: lease.leaseId, epoch: lease.epoch }),
-      })
-    );
+    it('rejects late render completion from partitioned worker presenting stale epoch (HTTP 409)', async () => {
+        // 1. Worker claims lease under Epoch 1
+        const grantRes = await coordinator.fetch(
+            new Request('http://localhost/lease/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jobId: 'j_zombie_render',
+                    artistId: 'a1',
+                    ttlMs: 30000,
+                }),
+            }),
+        )
+        const data = (await grantRes.json()) as any
+        const lease = data.lease
 
-    expect(compRes.status).toBe(409);
-    const compData = await compRes.json() as any;
-    expect(compData.ok).toBe(false);
-    expect(compData.error.code).toBe('ZOMBIE_LEASE_EPOCH');
-  });
+        // 2. Coordinator aborts or revokes lease, incrementing monotonic epoch
+        await coordinator.fetch(
+            new Request('http://localhost/lease/abort', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ leaseId: lease.leaseId }),
+            }),
+        )
 
-  it('guarantees fair round-robin interleaving preventing macro-batch starvation', () => {
-    const queue = new FairQueue();
-    const makeJob = (id: string, artist: string): ExecutionJob => ({
-      jobId: id,
-      sceneId: 'sc1',
-      artistId: artist,
-      idempotencyKey: `idem_${id}`,
-      ttlMs: 30000,
-      enqueuedAtMs: Date.now(),
-      attemptCount: 1,
-      maxAttempts: 3,
-    });
+        // 3. Stale worker finishes rendering and attempts to commit completion with Epoch 1
+        const compRes = await coordinator.fetch(
+            new Request('http://localhost/lease/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    leaseId: lease.leaseId,
+                    epoch: lease.epoch,
+                }),
+            }),
+        )
 
-    // Macro-batch of 3 jobs from Artist 1, followed by single revision from Artist 2
-    queue.enqueue(makeJob('j1', 'Artist_A1'));
-    queue.enqueue(makeJob('j2', 'Artist_A1'));
-    queue.enqueue(makeJob('j3', 'Artist_A1'));
-    queue.enqueue(makeJob('j4', 'Artist_A2'));
+        expect(compRes.status).toBe(409)
+        const compData = (await compRes.json()) as any
+        expect(compData.ok).toBe(false)
+        expect(compData.error.code).toBe('ZOMBIE_LEASE_EPOCH')
+    })
 
-    // If Artist A1 just finished, queue MUST interleave and select Artist A2 next
-    const picked1 = queue.dequeueNextFair('Artist_A1');
-    expect(picked1?.jobId).toBe('j4');
-    expect(picked1?.artistId).toBe('Artist_A2');
+    it('guarantees fair round-robin interleaving preventing macro-batch starvation', () => {
+        const queue = new FairQueue()
+        const makeJob = (id: string, artist: string): ExecutionJob => ({
+            jobId: id,
+            sceneId: 'sc1',
+            artistId: artist,
+            idempotencyKey: `idem_${id}`,
+            ttlMs: 30000,
+            enqueuedAtMs: Date.now(),
+            attemptCount: 1,
+            maxAttempts: 3,
+        })
 
-    // Next selection returns to Artist A1
-    const picked2 = queue.dequeueNextFair('Artist_A2');
-    expect(picked2?.jobId).toBe('j1');
-    expect(picked2?.artistId).toBe('Artist_A1');
-  });
+        // Macro-batch of 3 jobs from Artist 1, followed by single revision from Artist 2
+        queue.enqueue(makeJob('j1', 'Artist_A1'))
+        queue.enqueue(makeJob('j2', 'Artist_A1'))
+        queue.enqueue(makeJob('j3', 'Artist_A1'))
+        queue.enqueue(makeJob('j4', 'Artist_A2'))
 
-  it('quarantines task to Dead-Letter Queue (DLQ) after 3 consecutive watchdog timeouts', async () => {
-    // 1. Initial grant (Attempt 1)
-    await coordinator.fetch(
-      new Request('http://localhost/lease/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: 'j_flaky_gpu', artistId: 'a1' }),
-      })
-    );
+        // If Artist A1 just finished, queue MUST interleave and select Artist A2 next
+        const picked1 = queue.dequeueNextFair('Artist_A1')
+        expect(picked1?.jobId).toBe('j4')
+        expect(picked1?.artistId).toBe('Artist_A2')
 
-    // Strike 1: Timeout -> Requeues with attemptCount = 2
-    await coordinator.alarm();
-    expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(false);
+        // Next selection returns to Artist A1
+        const picked2 = queue.dequeueNextFair('Artist_A2')
+        expect(picked2?.jobId).toBe('j1')
+        expect(picked2?.artistId).toBe('Artist_A1')
+    })
 
-    // Strike 2: Timeout -> Requeues with attemptCount = 3
-    await coordinator.alarm();
-    expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(false);
+    it('quarantines task to Dead-Letter Queue (DLQ) after 3 consecutive watchdog timeouts', async () => {
+        // 1. Initial grant (Attempt 1)
+        await coordinator.fetch(
+            new Request('http://localhost/lease/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId: 'j_flaky_gpu', artistId: 'a1' }),
+            }),
+        )
 
-    // Strike 3: Timeout -> Exceeds max attempts, trips circuit breaker to DLQ
-    await coordinator.alarm();
-    expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(true);
+        // Strike 1: Timeout -> Requeues with attemptCount = 2
+        await coordinator.alarm()
+        expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(false)
 
-    const record = mockStorage.get('dlq:j_flaky_gpu');
-    expect(record.jobId).toBe('j_flaky_gpu');
-    expect(record.reason).toBe('MAX_ATTEMPTS_EXCEEDED_WATCHDOG_TIMEOUT');
-    expect(record.attemptCount).toBe(3);
-  });
-});
+        // Strike 2: Timeout -> Requeues with attemptCount = 3
+        await coordinator.alarm()
+        expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(false)
+
+        // Strike 3: Timeout -> Exceeds max attempts, trips circuit breaker to DLQ
+        await coordinator.alarm()
+        expect(mockStorage.has('dlq:j_flaky_gpu')).toBe(true)
+
+        const record = mockStorage.get('dlq:j_flaky_gpu')
+        expect(record.jobId).toBe('j_flaky_gpu')
+        expect(record.reason).toBe('MAX_ATTEMPTS_EXCEEDED_WATCHDOG_TIMEOUT')
+        expect(record.attemptCount).toBe(3)
+    })
+})
