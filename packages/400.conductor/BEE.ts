@@ -27,6 +27,8 @@ import RemotionUnit from './35.remotion.unit/remotion.unit.js'
 import EdgeBridgeUnit from './36.edgebridge.unit/edgebridge.unit.js'
 import LifecycleUnit from './37.lifecycle.unit/lifecycle.unit.js'
 import MenuUnit from './98.menu.unit/menu.unit.js'
+import Menu from './98.menu.unit/fce/menu.interface.js'
+import { MenuModel } from './98.menu.unit/menu.model.js'
 import { RemotionModel } from './35.remotion.unit/remotion.model.js'
 import { EdgeBridgeModel } from './36.edgebridge.unit/edgebridge.model.js'
 import { LifecycleModel } from './37.lifecycle.unit/lifecycle.model.js'
@@ -117,5 +119,5 @@ export default class UnitData implements Model {
   remotion: any = new RemotionModel();
   edgebridge: any = new EdgeBridgeModel();
   lifecycle: any = new LifecycleModel();
-  menu: any;
+  menu: Menu = new MenuModel();
 }
