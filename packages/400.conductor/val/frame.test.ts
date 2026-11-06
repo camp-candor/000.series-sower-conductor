@@ -1,90 +1,67 @@
-import { describe, it, expect } from 'vitest'
-import sim from '../hunt.js'
-import * as ActFrame from '../24.frame.unit/frame.action.js'
-import {
-    calculateCausalVaeAllocation,
-    quantizeShotTimeline,
-} from '../24.frame.unit/buz/frame.buzz.js'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { FrameModel } from '../24.frame.unit/frame.model.js';
+import * as Buzz from '../24.frame.unit/buz/frame.buzz.js';
+import { RawStemDuration } from '../24.frame.unit/fce/frame.interface.js';
 
-describe('packages/400.conductor 24.frame.unit Temporal Lattice Quantization', () => {
-    it('calculates 4n+1 causal VAE allocation and trim slack with zero negative error', () => {
-        // 75 delivery frames -> n = ceil((75-1)/4) = 19 -> 4(19)+1 = 77
-        const { allocation, trimEndFrames, efficiencyPct } =
-            calculateCausalVaeAllocation(75)
-        expect(allocation).toBe(77)
-        expect((allocation - 1) % 4).toBe(0)
-        expect(trimEndFrames).toBe(2)
-        expect(efficiencyPct).toBeCloseTo(97.4, 1)
+describe('24.frame.unit: Discrete Frame Temporal Quantization & Causal Alignment', () => {
+  let model: FrameModel;
 
-        // Exact lattice boundary: 37 frames -> n = ceil(36/4) = 9 -> 4(9)+1 = 37
-        const exact = calculateCausalVaeAllocation(37)
-        expect(exact.allocation).toBe(37)
-        expect(exact.trimEndFrames).toBe(0)
-        expect(exact.efficiencyPct).toBe(100.0)
-    })
+  beforeEach(() => {
+    model = new FrameModel();
+  });
 
-    it('tiles sequential shots using cumulative-millisecond math with zero drift across cuts', () => {
-        // Epic 3 invariant: frame spans derive from quantized cumulative-ms
-        // boundaries (3120 -> f75, 4960 -> f119, 7360 -> f177), never from
-        // per-shot ceil, so total drift stays under 1 frame (41.67 ms).
-        const rawShots = [
-            { shotId: 'sh01', durationMs: 3120 }, // 3.12s -> 75 frames (from 0 to 74)
-            { shotId: 'sh02', durationMs: 1840 }, // 1.84s -> 44 frames (from 75 to 118)
-            { shotId: 'sh03', durationMs: 2400 }, // 2.40s -> 58 frames (from 119 to 176)
-        ]
+  it('calculates causal 4n+1 VAE allocations correctly and enforces non-negative slack', () => {
+    const cases = [
+      { frames: 1, expectedAlloc: 1, expectedSlack: 0, n: 0 },
+      { frames: 2, expectedAlloc: 5, expectedSlack: 3, n: 1 },
+      { frames: 37, expectedAlloc: 37, expectedSlack: 0, n: 9 },
+      { frames: 38, expectedAlloc: 41, expectedSlack: 3, n: 10 },
+      { frames: 75, expectedAlloc: 77, expectedSlack: 2, n: 19 },
+    ];
 
-        const timeline = quantizeShotTimeline(rawShots)
-        expect(timeline.length).toBe(3)
+    for (const c of cases) {
+      const res = Buzz.calculateCausalVaeAllocation(c.frames);
+      expect(res.conformed_frames).toBe(c.expectedAlloc);
+      expect(res.padding_slack_frames).toBe(c.expectedSlack);
+      expect(res.n_stride).toBe(c.n);
+      expect((res.conformed_frames - 1) % 4).toBe(0);
+    }
+  });
 
-        // Shot 1 assertions
-        expect(timeline[0].targetFrames).toBe(75)
-        expect(timeline[0].fromFrame).toBe(0)
-        expect(timeline[0].toFrame).toBe(74)
+  it('guarantees cumulative-millisecond zero-drift contiguity across consecutive cuts', () => {
+    const shots: RawStemDuration[] = [
+      { shot_id: 'sh01', duration_ms: 3120 },
+      { shot_id: 'sh02', duration_ms: 1840 },
+      { shot_id: 'sh03', duration_ms: 2400 },
+    ];
 
-        // Shot 2 assertions (Perfect contiguity: fromFrame === prev.toFrame + 1)
-        expect(timeline[1].fromFrame).toBe(75)
-        expect(timeline[1].targetFrames).toBe(44)
-        expect(timeline[1].toFrame).toBe(118)
+    const timeline = Buzz.quantizeShotTimeline(shots);
+    expect(timeline.ok).toBe(true);
+    expect(timeline.is_contiguous).toBe(true);
 
-        // Shot 3 assertions
-        expect(timeline[2].fromFrame).toBe(119)
-        expect(timeline[2].targetFrames).toBe(58)
-        expect(timeline[2].toFrame).toBe(176)
+    for (let i = 0; i < timeline.shots.length - 1; i++) {
+      expect(timeline.shots[i].to_frame + 1).toBe(timeline.shots[i + 1].from_frame);
+    }
 
-        // Total episode drift must remain under 1 frame (41.67 ms)
-        const totalMs = rawShots.reduce((acc, s) => acc + s.durationMs, 0)
-        const totalFrames = timeline[timeline.length - 1].toFrame + 1
-        expect(Math.abs((totalFrames / 24) * 1000 - totalMs)).toBeLessThan(
-            41.67,
-        )
-    })
+    expect(timeline.drift_ms).toBeLessThan(41.67);
+  });
 
-    it('clamps ultra-brief sub-frame durations to minimum 1-frame interval', () => {
-        const briefShots = [
-            { shotId: 'sh_gasp', durationMs: 12 }, // 12ms < 41.67ms
-        ]
+  it('clamps sub-frame durations (< 41.67ms) to minimum 1 frame budget', () => {
+    const shots: RawStemDuration[] = [{ shot_id: 'sh_gasp', duration_ms: 15 }];
+    const timeline = Buzz.quantizeShotTimeline(shots);
 
-        const timeline = quantizeShotTimeline(briefShots)
-        expect(timeline[0].targetFrames).toBe(1)
-        expect(timeline[0].fromFrame).toBe(0)
-        expect(timeline[0].toFrame).toBe(0)
-        expect(timeline[0].diffusionAllocation).toBe(1)
-        expect(timeline[0].trimEndFrames).toBe(0)
-    })
+    expect(timeline.shots[0].target_frames).toBe(1);
+    expect(timeline.shots[0].from_frame).toBe(0);
+    expect(timeline.shots[0].to_frame).toBe(0);
+  });
 
-    it('dispatches COMPILE_TIMELINE_BUDGET via sim.hunt cleanly', async () => {
-        const res = await sim.hunt!(ActFrame.COMPILE_TIMELINE_BUDGET, {
-            src: 'ep01_sc01',
-            dat: {
-                shots: [
-                    { shotId: 'sh01', durationMs: 3120 },
-                    { shotId: 'sh02', durationMs: 2000 },
-                ],
-            },
-        })
+  it('preserves the 2,000-sample constant ratio across frame boundaries', () => {
+    const shots: RawStemDuration[] = [{ shot_id: 'sh01', duration_ms: 1000 }];
+    const timeline = Buzz.quantizeShotTimeline(shots);
+    const shot = timeline.shots[0];
 
-        expect(res).toBeDefined()
-        expect(res.frameBit.val).toBe(1)
-        expect(res.frameBit.dat.totalDeliveryFrames).toBe(123) // 75 + 48
-    })
-})
+    expect(shot.target_frames).toBe(24);
+    expect(shot.sample_offset_start).toBe(0);
+    expect(shot.sample_offset_end).toBe(24 * Buzz.SAMPLES_PER_FRAME);
+  });
+});

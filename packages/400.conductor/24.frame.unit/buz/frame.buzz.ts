@@ -1,260 +1,182 @@
-import { execSync } from 'node:child_process'
-import fs from 'node:fs'
-import { FrameModel } from '../frame.model.js'
-import FrameBit from '../fce/frame.bit.js'
-import State from '../../99.core/state.js'
+import { FrameModel } from '../frame.model.js';
+import FrameBit from '../fce/frame.bit.js';
 import {
-    ShotAcousticProbe,
-    QuantizedFrameBudget,
-    ExposureSheetManifest,
-} from '../fce/frame.interface.js'
+  RawStemDuration,
+  CausalVaeAllocation,
+  QuantizedShot,
+  TimelineQuantizationReceipt,
+} from '../fce/frame.interface.js';
+import { FrameQuantizationRequestSchema } from '../val/frame.val.js';
+import State from '../../99.core/state.js';
+import { execFile } from 'node:child_process';
+import * as fs from 'node:fs';
 
-export function probeAcousticDurationMs(
-    stemPath: string,
-    customProbeFn?: (path: string) => number,
-): number {
-    if (customProbeFn) {
-        return customProbeFn(stemPath)
-    }
+export const SAMPLES_PER_FRAME = 2000; // 48000 Hz / 24 fps
 
-    if (!fs.existsSync(stemPath)) {
-        throw new Error(
-            `PROBE_FAILED: Audio stem not found on disk at ${stemPath}`,
-        )
-    }
+export const extractDurationMsViaFfprobe = async (
+  wavPath: string,
+  mockDurationMs?: number,
+): Promise<number> => {
+  if (mockDurationMs !== undefined) return mockDurationMs;
 
-    try {
-        const rawSeconds = execSync(
-            `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${stemPath}"`,
-            { stdio: ['ignore', 'pipe', 'ignore'] },
-        )
-            .toString('ascii')
-            .trim()
+  if (!fs.existsSync(wavPath)) {
+    throw new Error(`FILE_NOT_FOUND: Audio stem does not exist at path: ${wavPath}`);
+  }
 
-        const parsedSeconds = parseFloat(rawSeconds)
-        if (isNaN(parsedSeconds) || parsedSeconds <= 0) {
-            throw new Error(
-                `PROBE_INVALID_DURATION: ffprobe returned '${rawSeconds}'`,
-            )
+  return new Promise((resolve, reject) => {
+    execFile(
+      'ffprobe',
+      [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        wavPath,
+      ],
+      (err, stdout) => {
+        if (err) {
+          reject(new Error(`FFPROBE_EXEC_FAILED: ${err.message}`));
+          return;
         }
-
-        return Math.round(parsedSeconds * 1000)
-    } catch (err: any) {
-        throw new Error(`PROBE_EXECUTION_FAULT: ${err.message}`)
-    }
-}
-
-export function calculateCausalVaeAllocation(masterFrames: number): {
-    allocation: number
-    trimEndFrames: number
-    efficiencyPct: number
-} {
-    // Causal 3D VAE stride rule: 4n + 1
-    const n = Math.ceil((masterFrames - 1) / 4)
-    const allocation = 4 * n + 1
-    const trimEndFrames = allocation - masterFrames
-    const efficiencyPct = Number(((masterFrames / allocation) * 100).toFixed(2))
-
-    return { allocation, trimEndFrames, efficiencyPct }
-}
-
-export function quantizeShotTimeline(
-    shots: Array<{ shotId: string; stemPath?: string; durationMs?: number }>,
-    customProbeFn?: (path: string) => number,
-): QuantizedFrameBudget[] {
-    const result: QuantizedFrameBudget[] = []
-    const MS_PER_FRAME = 1000 / 24
-    let cumulativeMs = 0
-    let currentFromFrame = 0
-
-    for (let i = 0; i < shots.length; i++) {
-        const shot = shots[i]
-        const durationMs =
-            shot.durationMs ??
-            probeAcousticDurationMs(shot.stemPath!, customProbeFn)
-
-        // Sub-frame Zero-Length Interval Clamp: minimum 1 frame (41.67 ms)
-        const clampedDurationMs = Math.max(durationMs, 42)
-        cumulativeMs += clampedDurationMs
-
-        // Zero-drift cumulative timeline derivation: quantize cumulative
-        // millisecond boundaries rather than per-shot durations so rounding
-        // error cannot compound across cuts. The 42ms clamp exceeds one
-        // frame interval, guaranteeing every span holds at least 1 frame.
-        const boundaryFrame = Math.round(cumulativeMs / MS_PER_FRAME)
-        const targetFrames = Math.max(1, boundaryFrame - currentFromFrame)
-        const toFrame = currentFromFrame + targetFrames - 1
-
-        const { allocation, trimEndFrames, efficiencyPct } =
-            calculateCausalVaeAllocation(targetFrames)
-
-        result.push({
-            shotId: shot.shotId,
-            durationMs: clampedDurationMs,
-            deliveryFps: 24,
-            targetFrames,
-            fromFrame: currentFromFrame,
-            toFrame,
-            diffusionAllocation: allocation,
-            trimEndFrames,
-            latticeEfficiencyPct: efficiencyPct,
-        })
-
-        currentFromFrame = toFrame + 1
-    }
-
-    return result
-}
-
-export const initFrame = (cpy: FrameModel, bal: FrameBit, _ste: State) => {
-    if (bal.slv) bal.slv({ frameBit: { idx: 'init-frame', val: 1 } })
-    return cpy
-}
-
-export const quantizeStemDuration = (
-    cpy: FrameModel,
-    bal: FrameBit,
-    _ste: State,
-) => {
-    const cns = '>> [QUANTIZE]'
-    const stemPath = bal.src || bal.dat?.stemPath
-    const shotId = bal.dat?.shotId || 'shot_000'
-    const customProbeFn = bal.dat?.probeDurationFn
-
-    if (!stemPath && !bal.dat?.durationMs) {
-        const err = 'QUANTIZATION_REJECTED: Missing stemPath or durationMs'
-        process.stderr.write(`${cns} [FAIL] ${err}\n`)
-        if (bal.slv)
-            return bal.slv({
-                frameBit: {
-                    idx: 'quantize-stem-duration-error',
-                    val: 0,
-                    src: err,
-                },
-            })
-        throw new Error(err)
-    }
-
-    try {
-        const durationMs =
-            bal.dat?.durationMs ??
-            probeAcousticDurationMs(stemPath!, customProbeFn)
-        const budgets = quantizeShotTimeline([{ shotId, durationMs }])
-        const budget = budgets[0]
-
-        process.stdout.write(
-            `${cns} [OK] Shot ${shotId}: ${durationMs}ms -> ${budget.targetFrames} frames (VAE: ${budget.diffusionAllocation}f, Trim: ${budget.trimEndFrames}f)\n`,
-        )
-
-        if (bal.slv) {
-            bal.slv({
-                frameBit: {
-                    idx: 'quantize-stem-duration',
-                    val: 1,
-                    src: shotId,
-                    dat: budget,
-                },
-            })
+        const durationSec = parseFloat(stdout.trim());
+        if (isNaN(durationSec) || durationSec <= 0) {
+          reject(new Error(`FFPROBE_PARSE_FAILED: Invalid duration string: ${stdout}`));
+          return;
         }
-    } catch (err: any) {
-        process.stderr.write(`${cns} [FAIL] ${err.message}\n`)
-        if (bal.slv) {
-            bal.slv({
-                frameBit: {
-                    idx: 'quantize-stem-duration-error',
-                    val: 0,
-                    src: err.message,
-                },
-            })
-        } else {
-            throw err
-        }
+        resolve(Math.round(durationSec * 1000));
+      },
+    );
+  });
+};
+
+export const calculateCausalVaeAllocation = (rawFrames: number): CausalVaeAllocation => {
+  const clampedRaw = Math.max(1, rawFrames);
+  const nStride = Math.ceil((clampedRaw - 1) / 4);
+  const conformedFrames = 4 * nStride + 1;
+  const paddingSlackFrames = conformedFrames - clampedRaw;
+
+  return {
+    raw_frames: clampedRaw,
+    conformed_frames: conformedFrames,
+    padding_slack_frames: paddingSlackFrames,
+    n_stride: nStride,
+  };
+};
+
+export const quantizeShotTimeline = (stems: RawStemDuration[]): TimelineQuantizationReceipt => {
+  if (!stems || stems.length === 0) {
+    throw new Error('TIMELINE_QUANT_EMPTY: Cannot quantize empty stem list');
+  }
+
+  const quantizedShots: QuantizedShot[] = [];
+  let cumulativeMs = 0;
+  let totalRawMs = 0;
+
+  for (let i = 0; i < stems.length; i++) {
+    const stem = stems[i];
+    totalRawMs += stem.duration_ms;
+
+    const fromFrame = Math.ceil((cumulativeMs / 1000) * 24);
+    cumulativeMs += stem.duration_ms;
+    const toFrame = Math.max(fromFrame, Math.ceil((cumulativeMs / 1000) * 24) - 1);
+    const targetFrames = Math.max(1, toFrame - fromFrame + 1);
+
+    const causalVae = calculateCausalVaeAllocation(targetFrames);
+
+    quantizedShots.push({
+      shot_id: stem.shot_id,
+      duration_ms: stem.duration_ms,
+      target_frames: targetFrames,
+      from_frame: fromFrame,
+      to_frame: toFrame,
+      sample_offset_start: fromFrame * SAMPLES_PER_FRAME,
+      sample_offset_end: (toFrame + 1) * SAMPLES_PER_FRAME,
+      causal_vae: causalVae,
+    });
+  }
+
+  let isContiguous = true;
+  for (let i = 0; i < quantizedShots.length - 1; i++) {
+    if (quantizedShots[i].to_frame + 1 !== quantizedShots[i + 1].from_frame) {
+      isContiguous = false;
+      break;
+    }
+  }
+
+  const totalFrames = quantizedShots[quantizedShots.length - 1].to_frame + 1;
+  const videoDurationMs = (totalFrames / 24) * 1000;
+  const driftMs = Math.abs(videoDurationMs - totalRawMs);
+
+  return {
+    ok: isContiguous && driftMs < 41.67,
+    total_shots: quantizedShots.length,
+    total_duration_ms: totalRawMs,
+    total_frames: totalFrames,
+    drift_ms: Number(driftMs.toFixed(3)),
+    is_contiguous: isContiguous,
+    shots: quantizedShots,
+  };
+};
+
+export const initFrame = (cpy: FrameModel, bal: FrameBit, ste: State) => {
+  if (bal.slv != null) bal.slv({ frmBit: { idx: 'init-frame', val: 1 } });
+  return cpy;
+};
+
+export const updateFrame = (cpy: FrameModel, bal: FrameBit, ste: State) => {
+  if (bal.slv != null) bal.slv({ frmBit: { idx: 'update-frame' } });
+  return cpy;
+};
+
+export const quantizeAcousticClock = (cpy: FrameModel, bal: FrameBit, ste: State) => {
+  try {
+    if (!bal.dat?.stems) {
+      throw new Error('MISSING_STEMS: dat.stems array is required for timeline quantization');
     }
 
-    return cpy
-}
+    const validatedReq = FrameQuantizationRequestSchema.parse({ stems: bal.dat.stems }) as any;
+    const receipt = quantizeShotTimeline(validatedReq.stems);
 
-export const compileTimelineBudget = (
-    cpy: FrameModel,
-    bal: FrameBit,
-    _ste: State,
-) => {
-    const cns = '>> [QUANTIZE]'
-    const sceneId = bal.src || bal.dat?.sceneId || 'scene_000'
-    const shots = (bal.dat?.shots || []) as Array<{
-        shotId: string
-        stemPath?: string
-        durationMs?: number
-    }>
-    const customProbeFn = bal.dat?.probeDurationFn
+    cpy.lastTimelineReceipt = receipt;
+    cpy.totalQuantizedShots += receipt.total_shots;
 
-    if (shots.length === 0) {
-        const err = `BUDGET_REJECTED: Zero shots provided for scene ${sceneId}`
-        process.stderr.write(`${cns} [FAIL] ${err}\n`)
-        if (bal.slv)
-            return bal.slv({
-                frameBit: {
-                    idx: 'compile-timeline-budget-error',
-                    val: 0,
-                    src: err,
-                },
-            })
-        throw new Error(err)
+    if (global.LIBRARY) {
+      global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `>> [QUANT] Quantized ${receipt.total_shots} shots: ${receipt.total_frames} frames (${receipt.total_duration_ms}ms) | Drift=${receipt.drift_ms}ms`,
+      });
+      for (const shot of receipt.shots) {
+        global.LIBRARY.hunt('[Console action] Update Console', {
+          idx: 'cns00',
+          src: `>> [QUANT] [${shot.shot_id}]: frames=${shot.target_frames} (from=${shot.from_frame}, to=${shot.to_frame}) | VAE=${shot.causal_vae.conformed_frames}f (slack=${shot.causal_vae.padding_slack_frames}f)`,
+        });
+      }
     }
 
-    try {
-        const quantizedShots = quantizeShotTimeline(shots, customProbeFn)
-        const totalDurationMs = quantizedShots.reduce(
-            (acc, s) => acc + s.durationMs,
-            0,
-        )
-        const totalDeliveryFrames = quantizedShots.reduce(
-            (acc, s) => acc + s.targetFrames,
-            0,
-        )
-
-        const manifest: ExposureSheetManifest = {
-            sceneId,
-            compiledAtMs: Date.now(),
-            deliveryFps: 24,
-            totalDurationMs,
-            totalDeliveryFrames,
-            shots: quantizedShots,
-        }
-
-        cpy.totalScenesQuantized += 1
-        cpy.lastExposureSheet = manifest
-
-        process.stdout.write(
-            `${cns} [OK] Scene ${sceneId} compiled: ${totalDurationMs}ms across ${quantizedShots.length} shots (${totalDeliveryFrames} frames)\n`,
-        )
-
-        if (bal.slv) {
-            bal.slv({
-                frameBit: {
-                    idx: 'compile-timeline-budget',
-                    val: 1,
-                    src: sceneId,
-                    dat: manifest,
-                },
-            })
-        }
-    } catch (err: any) {
-        process.stderr.write(
-            `${cns} [FAIL] Compilation failed: ${err.message}\n`,
-        )
-        if (bal.slv) {
-            bal.slv({
-                frameBit: {
-                    idx: 'compile-timeline-budget-error',
-                    val: 0,
-                    src: err.message,
-                },
-            })
-        } else {
-            throw err
-        }
+    if (bal.slv != null) {
+      bal.slv({
+        frmBit: {
+          idx: 'quantize-acoustic-clock-success',
+          dat: { receipt },
+        },
+      });
     }
+  } catch (err: any) {
+    const errorMsg = err.message || String(err);
+    if (global.LIBRARY) {
+      global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `:: [QUANT] [FAIL] Frame quantization error: ${errorMsg}`,
+      });
+    }
+    if (bal.slv != null) {
+      bal.slv({
+        frmBit: {
+          idx: 'quantize-acoustic-clock-error',
+          src: errorMsg,
+        },
+      });
+    }
+  }
 
-    return cpy
-}
+  return cpy;
+};
