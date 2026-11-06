@@ -17,3 +17,10 @@ export {
     murmurHash3,
     resolveDeterministicFoleyCue,
 } from './buz/foleySeeder.buzz.js'
+export {
+    PARALLAX_FOLEY_REGISTRY,
+    mulberry32,
+    matchActionLinesToFoleyPlacements,
+    mergeCloseSpeechWindows,
+    compileParallaxExposureSheet
+} from './buz/foleyMatcher.buzz.js'
