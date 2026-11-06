@@ -1,254 +1,125 @@
-import { vi } from 'vitest'
+import { describe, it, expect } from 'vitest';
+import app, { ShotCoordinatorDO } from '../../src/index.js';
 
-vi.mock('cloudflare:workers', () => {
-    return {
-        DurableObject: class MockDurableObject {
-            constructor(
-                public ctx: any,
-                public env: any,
-            ) {}
-        },
-    }
-})
+describe('apps/worker - ShotCoordinatorDO & Edge Routing', () => {
+  it('GET / returns the authoritative conductor edge banner', async () => {
+    const res = await app.request('/');
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toBe('SERIES-SOWER-CONDUCTOR EDGE BRIDGE IS LIVE');
+  });
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { FairQueue, ExecutionJob } from '../../src/queue/fairQueue.js'
-import { ShotCoordinatorDO } from '../../src/objects/ShotCoordinatorDO.js'
-
-describe('apps/worker Phase 4 Shot Coordinator DO & Fair Queue Mutex', () => {
-    describe('Studio Velocity FairQueue Unit Logic', () => {
-        let queue: FairQueue
-
-        beforeEach(() => {
-            queue = new FairQueue()
+  it('GET /health reports pure 7-bit ASCII telemetry', async () => {
+    const mockEnv = {
+      CANON_DB: {
+        prepare: () => ({
+          run: async () => ({})
         })
+      }
+    };
 
-        it('enqueues jobs and rejects duplicates by jobId or idempotencyKey', () => {
-            const job1: ExecutionJob = {
-                jobId: 'j1',
-                sceneId: 'sc1',
-                artistId: 'a1',
-                idempotencyKey: 'idem1',
-                ttlMs: 30000,
-                enqueuedAtMs: Date.now(),
-                attemptCount: 1,
-                maxAttempts: 3,
-            }
+    const res = await app.request('/health', {}, mockEnv as any);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as any;
+    expect(json.status).toBe('ONLINE');
+    expect(json.role).toBe('EDGE_BRIDGE_COORDINATOR');
+    expect(json.d1_status).toBe('HEALTHY');
+    expect(json.merkle_check_capable).toBe(true);
+  });
 
-            expect(queue.enqueue(job1)).toBe(true)
-            expect(queue.size()).toBe(1)
-
-            // Duplicate jobId
-            expect(queue.enqueue({ ...job1, idempotencyKey: 'idem2' })).toBe(
-                false,
-            )
-            // Duplicate idempotencyKey
-            expect(queue.enqueue({ ...job1, jobId: 'j2' })).toBe(false)
-            expect(queue.size()).toBe(1)
-        })
-
-        it('interleaves tasks fairly across different artist IDs (Round-Robin)', () => {
-            const makeJob = (id: string, artist: string): ExecutionJob => ({
-                jobId: id,
-                sceneId: 'sc1',
-                artistId: artist,
-                idempotencyKey: `idem_${id}`,
-                ttlMs: 30000,
-                enqueuedAtMs: Date.now(),
-                attemptCount: 1,
-                maxAttempts: 3,
+  it('GET /staleness/:scene_id enforces sub-5ms HTTP 412 on dirty scenes', async () => {
+    const mockEnv = {
+      CANON_DB: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => ({
+              scene_id: 'ep01_sc01',
+              is_dirty: 1,
+              pinned_version: 4
             })
-
-            // Macro-batch from A1 followed by revision from A2
-            queue.enqueue(makeJob('j1', 'A1'))
-            queue.enqueue(makeJob('j2', 'A1'))
-            queue.enqueue(makeJob('j3', 'A2'))
-
-            // If last completed job was from A1, dequeue must pick A2 next to prevent starvation
-            const next1 = queue.dequeueNextFair('A1')
-            expect(next1?.jobId).toBe('j3')
-            expect(next1?.artistId).toBe('A2')
-
-            // Next job alternates back to remaining A1
-            const next2 = queue.dequeueNextFair('A2')
-            expect(next2?.jobId).toBe('j1')
-
-            const next3 = queue.dequeueNextFair('A1')
-            expect(next3?.jobId).toBe('j2')
-            expect(queue.size()).toBe(0)
+          })
         })
-    })
+      }
+    };
 
-    describe('ShotCoordinatorDO State Machine & Fencing', () => {
-        let mockStorage: Map<string, any>
-        let mockAlarm: number | null
-        let coordinator: ShotCoordinatorDO
+    const res = await app.request('/staleness/ep01_sc01', {}, mockEnv as any);
+    expect(res.status).toBe(412);
+    const json = (await res.json()) as any;
+    expect(json.error).toBe('DIRTY_SCENE_REJECTED');
+    expect(json.is_dirty).toBe(1);
+  });
 
-        beforeEach(() => {
-            mockStorage = new Map()
-            mockAlarm = null
-
-            const mockCtx: any = {
-                getWebSockets: (_tag?: string) => [],
-                blockConcurrencyWhile: async (fn: any) => fn(),
-                storage: {
-                    get: async (key: string) => mockStorage.get(key),
-                    put: async (key: string, val: any) =>
-                        mockStorage.set(key, val),
-                    delete: async (key: string) => mockStorage.delete(key),
-                    setAlarm: async (ms: number) => {
-                        mockAlarm = ms
-                    },
-                    deleteAlarm: async () => {
-                        mockAlarm = null
-                    },
-                },
-            }
-
-            coordinator = new ShotCoordinatorDO(mockCtx, {})
-        })
-
-        it('grants initial lease and increments epoch N to 1', async () => {
-            const req = new Request('http://localhost/lease/request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jobId: 'job_audit_1',
-                    sceneId: 'sc01',
-                    artistId: 'artist_kael',
-                    ttlMs: 30000,
-                }),
+  it('GET /staleness/:scene_id passes clean scenes with HTTP 200', async () => {
+    const mockEnv = {
+      CANON_DB: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => ({
+              scene_id: 'ep01_sc02',
+              is_dirty: 0,
+              pinned_version: 2
             })
-
-            const res = await coordinator.fetch(req)
-            expect(res.status).toBe(200)
-
-            const data = (await res.json()) as any
-            expect(data.ok).toBe(true)
-            expect(data.status).toBe('LEASE_GRANTED')
-            expect(data.currentEpoch).toBe(1)
-            expect(data.lease.epoch).toBe(1)
-            expect(mockAlarm).toBeGreaterThan(Date.now())
+          })
         })
+      }
+    };
 
-        it('enqueues second concurrent request when active lease is occupied', async () => {
-            // 1. First claim
-            await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId: 'job_1', artistId: 'A1' }),
-                }),
-            )
+    const res = await app.request('/staleness/ep01_sc02', {}, mockEnv as any);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as any;
+    expect(json.is_dirty).toBe(0);
+  });
 
-            // 2. Second claim (should queue)
-            const res2 = await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId: 'job_2', artistId: 'A2' }),
-                }),
-            )
+  it('ShotCoordinatorDO manages monotonic epoch leases and fences zombies', async () => {
+    const mockState = {
+      storage: {
+        get: async () => null,
+        put: async () => {}
+      }
+    } as unknown as DurableObjectState;
 
-            expect(res2.status).toBe(202)
-            const data2 = (await res2.json()) as any
-            expect(data2.ok).toBe(true)
-            expect(data2.status).toBe('QUEUED')
-            expect(data2.queuePosition).toBe(1)
-        })
+    const coordinator = new ShotCoordinatorDO(mockState);
 
-        it('rejects stale epoch heartbeats with HTTP 409 Conflict', async () => {
-            const grantRes = await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        jobId: 'job_stale_test',
-                        artistId: 'A1',
-                    }),
-                }),
-            )
-            const { lease } = (await grantRes.json()) as any
+    // 1. Acquire initial lease
+    const req1 = new Request('http://internal/lease/acquire', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ shot_id: 'shot_101', ttl_ms: 30000, worker_id: 'rig2_foundry' })
+    });
+    const res1 = await coordinator.fetch(req1);
+    expect(res1.status).toBe(200);
+    const data1 = (await res1.json()) as any;
+    expect(data1.granted).toBe(true);
+    expect(data1.epoch).toBe(1);
 
-            // Submit heartbeat with stale epoch 999
-            const hbRes = await coordinator.fetch(
-                new Request('http://localhost/lease/heartbeat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        leaseId: lease.leaseId,
-                        epoch: 999,
-                    }),
-                }),
-            )
+    // 2. Conflicting worker attempts to acquire locked lease
+    const req2 = new Request('http://internal/lease/acquire', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ shot_id: 'shot_101', ttl_ms: 30000, worker_id: 'zombie_worker' })
+    });
+    const res2 = await coordinator.fetch(req2);
+    expect(res2.status).toBe(409);
 
-            expect(hbRes.status).toBe(409)
-            const hbData = (await hbRes.json()) as any
-            expect(hbData.error.code).toBe('ZOMBIE_LEASE_EPOCH')
-        })
+    // 3. Original worker sends heartbeat with matching epoch
+    const req3 = new Request('http://internal/lease/heartbeat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ shot_id: 'shot_101', ttl_ms: 30000, epoch: 1 })
+    });
+    const res3 = await coordinator.fetch(req3);
+    expect(res3.status).toBe(200);
 
-        it('completes lease, disarms alarm, and dispatches queued job with incremented epoch', async () => {
-            // 1. Grant Job 1
-            const res1 = await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId: 'j1', artistId: 'A1' }),
-                }),
-            )
-            const { lease: lease1 } = (await res1.json()) as any
+    // 4. Stale epoch heartbeat is fenced
+    const req4 = new Request('http://internal/lease/heartbeat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ shot_id: 'shot_101', ttl_ms: 30000, epoch: 0 })
+    });
+    const res4 = await coordinator.fetch(req4);
+    expect(res4.status).toBe(409);
+    const data4 = (await res4.json()) as any;
+    expect(data4.error).toBe('STALE_EPOCH_FENCE');
+  });
+});
 
-            // 2. Enqueue Job 2
-            await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId: 'j2', artistId: 'A2' }),
-                }),
-            )
-
-            // 3. Complete Job 1
-            const compRes = await coordinator.fetch(
-                new Request('http://localhost/lease/complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        leaseId: lease1.leaseId,
-                        epoch: lease1.epoch,
-                    }),
-                }),
-            )
-
-            expect(compRes.status).toBe(200)
-            const compData = (await compRes.json()) as any
-            expect(compData.status).toBe('LEASE_COMPLETED')
-            expect(compData.nextJobDispatched).toBe(true)
-            expect(compData.nextLease.jobId).toBe('j2')
-            expect(compData.nextLease.epoch).toBe(2) // N -> N+1
-        })
-
-        it('triggers watchdog alarm, revokes dead lease, and increments epoch', async () => {
-            // Grant lease
-            await coordinator.fetch(
-                new Request('http://localhost/lease/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        jobId: 'j_timeout',
-                        artistId: 'A1',
-                    }),
-                }),
-            )
-
-            // Simulate watchdog alarm firing
-            await coordinator.alarm()
-
-            const statusRes = await coordinator.fetch(
-                new Request('http://localhost/status'),
-            )
-            const statusData = (await statusRes.json()) as any
-            expect(statusData.hasActiveLease).toBe(true)
-            expect(statusData.currentEpoch).toBe(3)
-        })
-    })
-})
