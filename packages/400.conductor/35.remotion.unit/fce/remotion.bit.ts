@@ -9,6 +9,7 @@ export default interface RemotionBit {
     src?: string
     val?: number
     dat?: {
+        audioOnly?: boolean
         sceneId?: string
         shots?: SceneShotPlan[]
         options?: StampCompositionOptions

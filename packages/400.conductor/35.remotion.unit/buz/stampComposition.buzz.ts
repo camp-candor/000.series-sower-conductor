@@ -69,8 +69,63 @@ export async function stampStaticComposition(
         .map((s, idx) => generateOpticalStackJsx(idx + 1, s))
         .join('\n\n')
 
+    const isAudioOnly = options.audioOnly === true;
+
+
+
     // Construct raw TSX body with raw unquoted numeric literals
-    const bodyContent = `
+    let bodyContent = '';
+    if (isAudioOnly) {
+        const duckExpr = calculateDuckVolumeExpression(shots);
+
+        let track1Dialogue = '';
+        let track2Foley = '';
+
+        if (shots.length > 0) {
+            track1Dialogue = shots.map((s, idx) => `          <Sequence from={${s.fromFrame}} durationInFrames={${s.durationFrames}}>
+            <Audio src={staticFile('audio/dialogue/${s.shotIndex || (s as any).shotId || idx}.wav')} />
+          </Sequence>`).join('\n');
+        }
+
+        if (options.foleyClips && options.foleyClips.length > 0) {
+            track2Foley = options.foleyClips.map(f => `          <Sequence from={${f.fromFrame}} durationInFrames={${f.durationInFrames}}>
+            <Audio src={staticFile('${f.foleyPath}')} volume={${f.volumeLinear}} />
+          </Sequence>`).join('\n');
+        }
+
+        bodyContent = `
+import React from 'react';
+import { Composition, Sequence, Audio, staticFile, useCurrentFrame } from 'remotion';
+
+export const Master_${sceneId}: React.FC = () => {
+  return (
+    <Composition
+      id="${sceneId}"
+      durationInFrames={${totalFrames}}
+      fps={24}
+      width={1920}
+      height={1080}
+      component={() => (
+        <>
+          {/* Track 3: Ambient Bed */}
+          <Audio
+            src={staticFile('${ambientPath}')}
+            volume={${duckExpr}}
+            loop
+          />
+
+${track1Dialogue}
+
+${track2Foley}
+        </>
+      )}
+    />
+  );
+};
+`.trim();
+    } else {
+
+    bodyContent = `
 import React from 'react';
 import { Composition, Sequence, Audio, Img, Video, staticFile, useCurrentFrame, interpolate } from 'remotion';
 
@@ -99,6 +154,8 @@ ${sequenceNodes}
   );
 };
 `.trim()
+    }
+
 
     // Normalize LF line endings and compute SHA-256 body checksum
     const normalizedBody = bodyContent.replace(/\r\n/g, '\n')
