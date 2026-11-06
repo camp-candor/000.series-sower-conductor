@@ -236,7 +236,7 @@ export const stampStaticComposition = (
     const rawShots = (bal.dat?.shots || []) as any[]
     const kinematicsModes = bal.dat?.kinematicsModes
     const audioPlan = bal.dat?.audioPlan
-    const audioOnly = bal.dat?.audioOnly ?? false
+    const audioOnly = bal.dat?.audioOnly ?? bal.dat?.options?.audioOnly ?? false
 
     const ejectStatus = inspectEjectLockHeader(outputTsxPath)
     if (ejectStatus.isLocked) {

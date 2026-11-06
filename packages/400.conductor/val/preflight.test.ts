@@ -1,3 +1,4 @@
+import { beforeEach, afterEach } from 'vitest'
 import { describe, it, expect } from 'vitest'
 import sim from '../hunt.js'
 import * as ActCpus from '../28.cpus.unit/cpus.action.js'
@@ -9,6 +10,13 @@ import {
 import { evaluateZeroVramPolicy } from '../27.cuda.unit/buz/cuda.buzz.js'
 
 describe('packages/400.conductor Pre-Flight Hardware Gate', () => {
+    const originalEnv = process.env
+    beforeEach(() => {
+        process.env = { ...originalEnv, CI: 'true', REQUIRE_REAL_FFPROBE: '' }
+    })
+    afterEach(() => {
+        process.env = originalEnv
+    })
     it('passes hardware preflight on valid host via sim.hunt', async () => {
         const res = await sim.hunt!(ActCpus.VERIFY_HARDWARE_PREFLIGHT, {})
         expect(res).toBeDefined()

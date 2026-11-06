@@ -130,7 +130,9 @@ export const synthesizeSingleLineWithRetry = async (
                 })
             }
 
-            const scriptPath = path.resolve('synthesize.py')
+            const scriptPath = fs.existsSync(path.resolve('synthesize.py'))
+                ? path.resolve('synthesize.py')
+                : path.resolve(process.cwd(), '../../synthesize.py')
             const args = buildCliArgs(
                 scriptPath,
                 item,

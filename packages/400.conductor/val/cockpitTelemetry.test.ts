@@ -164,6 +164,7 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
         it('verifies complete 8-choice pipeline roster in CONDUCTOR_MENU_CHOICES', () => {
             const labels = Buzz.CONDUCTOR_MENU_CHOICES.map((c) => c.label)
             expect(labels).toEqual([
+                'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
                 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
                 'AUDIT DIALOGUE AST CONTRACT',
                 'INSPECT CHARACTER SOMATIC DSP',

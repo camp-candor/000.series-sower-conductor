@@ -57,6 +57,13 @@ export const choices: string[] = [
 
 export const CONDUCTOR_MENU_CHOICES = [
     {
+        id: 'CHOICE_PARALLAX_AUDIO_PIPELINE',
+        label: 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
+        tooltip:
+            'Chains AST Parity -> Exposure Sheet -> Audio-Only Stamping -> WORM Lockfile and emits Receipts to cns00.',
+        actionType: '[Menu action] Run Parallax Dinner Pipeline',
+    },
+    {
         id: 'CHOICE_MASTER_LIFECYCLE',
         label: 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
         tooltip:
