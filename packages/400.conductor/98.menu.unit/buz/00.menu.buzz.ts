@@ -13,6 +13,12 @@ export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
 
 export const CONDUCTOR_MENU_CHOICES = [
     {
+        id: 'CHOICE_MASTER_LIFECYCLE',
+        label: 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
+        tooltip: 'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
+        actionType: '[Lifecycle action] Chain Master Scene Lifecycle',
+    },
+    {
         id: 'CHOICE_AST_AUDIT',
         label: 'AUDIT DIALOGUE AST CONTRACT',
         tooltip:
@@ -195,6 +201,19 @@ export const updateMenu = async (
         cpy.lastActionTimestamp = Date.now()
 
         switch (matchedChoice.id) {
+            case 'CHOICE_MASTER_LIFECYCLE':
+                {
+                    const bit = await ste.hunt('[Lifecycle action] Chain Master Scene Lifecycle', {
+                        src: 'ep01_sc01',
+                    })
+                    if (bit?.lfcBit?.val === 1) {
+                        await global.LIBRARY.hunt('[Console action] Update Console', {
+                            idx: 'cns00',
+                            src: '>> [MENU:LIFECYCLE] Master Scene Lifecycle finished successfully [OK]',
+                        })
+                    }
+                }
+                break
             case 'CHOICE_AST_AUDIT':
                 await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
                     dat: { filePath: './drafts/dialogue_ast.json' },
