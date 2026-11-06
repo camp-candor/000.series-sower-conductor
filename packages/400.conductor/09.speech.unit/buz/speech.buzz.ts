@@ -1,285 +1,314 @@
-import crypto from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
-import { SpeechModel } from '../speech.model.js'
-import SpeechBit from '../fce/speech.bit.js'
+import { SpeechModel } from '../speech.model.js';
+import SpeechBit from '../fce/speech.bit.js';
 import {
-    TTSGenerationRequest,
-    AudioStemResult,
-    SceneSynthesisResult,
-} from '../fce/speech.interface.js'
-import State from '../../99.core/state.js'
-import type {
-    DialogueLine,
-    SceneAST,
-} from '../../34.abstractsyntaxtree.unit/fce/abstractsyntaxtree.interface.js'
+  SpeechGenerationRequest,
+  DialogueSynthesisItem,
+  StemSynthesisReceipt,
+  SceneSpeechReceipt,
+} from '../fce/speech.interface.js';
+import { SpeechGenerationRequestSchema } from '../val/speech.val.js';
+import State from '../../99.core/state.js';
+import { execFile } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
-export const mapDialogueLineToTTSRequest = (
-    line: DialogueLine,
-): TTSGenerationRequest => {
-    const s = line.somatic_dsp
-    const m = line.mru_directive
+export const buildCliArgs = (
+  scriptPath: string,
+  item: DialogueSynthesisItem,
+  outputPath: string,
+  engine: string,
+  seriesId: string,
+): string[] => {
+  const args: string[] = [
+    scriptPath,
+    '--engine', engine,
+    '--character', item.speaker_id,
+    '--series', seriesId,
+    '--text', item.dialogue_text,
+    '--output', outputPath,
+  ];
 
-    const basePitchShiftSemitones = Number(
-        (s.pitch_shift_cents / 100).toFixed(2),
-    )
-    const breathinessPauseMultiplier = Number(
-        (1.0 + 2.5 * (s.breathiness_bps / 10000)).toFixed(3),
-    )
-    const pause_frequency_multiplier = Number(
-        (0.5 + 2.5 * (m.intensity_bps / 10000)).toFixed(3),
-    )
-    const vocalFryDensity = Number(
-        (s.gain_attenuation_bps > 5000 ? 0.45 : 0.0).toFixed(2),
-    )
-    const tonePacing = 1.0
+  if (item.dsp_modifiers) {
+    args.push(
+      '--pitch-shift', String(item.dsp_modifiers.effective_pitch_semitones ?? 0.0),
+      '--formant-warp', String(item.dsp_modifiers.effective_formant_warping ?? 1.0),
+      '--breathiness', String(item.dsp_modifiers.effective_breathiness_multiplier ?? 1.0),
+      '--pause-multiplier', String(item.dsp_modifiers.pause_frequency_multiplier ?? 1.0),
+      '--vocal-fry', String(item.dsp_modifiers.effective_vocal_fry_density ?? 0.0),
+    );
+  }
 
-    return {
-        character: line.speaker_id,
-        text: line.dialogue_clean_ascii,
-        emotion: line.emotional_tag,
-        tonePacing,
-        dsp_modifiers: {
-            basePitchShiftSemitones,
-            formantWarpingFactor: 1.0,
-            breathinessPauseMultiplier,
-            vocalFryDensity,
-            pause_frequency_multiplier,
-        },
+  return args;
+};
+
+export const verifyZeroByteSentinel = (filePath: string): boolean => {
+  if (!fs.existsSync(filePath)) return false;
+  const stats = fs.statSync(filePath);
+  if (stats.size < 1024) return false;
+
+  const fd = fs.openSync(filePath, 'r');
+  const buffer = Buffer.alloc(12);
+  fs.readSync(fd, buffer, 0, 12, 0);
+  fs.closeSync(fd);
+
+  const riff = buffer.subarray(0, 4).toString('ascii');
+  const wave = buffer.subarray(8, 12).toString('ascii');
+  return riff === 'RIFF' && wave === 'WAVE';
+};
+
+export const pollFileStabilization = async (
+  stagingPath: string,
+  maxTimeoutMs = 45000,
+  pollIntervalMs = 200,
+): Promise<number> => {
+  const startTime = Date.now();
+  let lastSize = -1;
+  let stableTicks = 0;
+
+  while (Date.now() - startTime < maxTimeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+
+    if (fs.existsSync(stagingPath)) {
+      const currentSize = fs.statSync(stagingPath).size;
+      if (currentSize > 0 && currentSize === lastSize) {
+        stableTicks++;
+        if (stableTicks >= 2) {
+          return currentSize;
+        }
+      } else {
+        stableTicks = 0;
+        lastSize = currentSize;
+      }
     }
-}
+  }
+
+  throw new Error(`SYNTHESIS_TIMEOUT_BREACH: File failed to stabilize within ${maxTimeoutMs}ms`);
+};
 
 export const synthesizeSingleLineWithRetry = async (
-    line: DialogueLine,
-    endpointUrl: string,
-    outputDir: string,
-    maxRetries = 3,
-    fetchFn: typeof fetch = fetch,
-): Promise<AudioStemResult> => {
-    const cns = '>> [SPEECH]'
-    const reqPayload = mapDialogueLineToTTSRequest(line)
-    const targetWavPath = path.resolve(
-        process.cwd(),
-        path.join(outputDir, `${line.line_id}.wav`),
-    )
-    const tmpWavPath = `${targetWavPath}.tmp`
+  item: DialogueSynthesisItem,
+  outputDir: string,
+  engine: string,
+  seriesId: string,
+  sceneId: string,
+): Promise<StemSynthesisReceipt> => {
+  const lineStart = Date.now();
+  const filename = item.output_filename || `${sceneId}_${item.line_id}.wav`;
+  const finalPath = path.resolve(outputDir, filename);
+  const stagingPath = `${finalPath}.tmp`;
 
-    const dir = path.dirname(targetWavPath)
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
-    }
+  let attempt = 0;
+  const maxAttempts = 3;
+  let lastError: Error | null = null;
 
-    let attempt = 0
-    let lastError: Error | null = null
-
-    while (attempt < maxRetries) {
-        attempt++
-        try {
-            const res = await fetchFn(
-                `${endpointUrl.replace(/\/$/, '')}/generate`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(reqPayload),
-                },
-            )
-
-            if (!res.ok) {
-                throw new Error(
-                    `TTS_HTTP_ERROR: Server returned status ${res.status}`,
-                )
-            }
-
-            const buffer = Buffer.from(await res.arrayBuffer())
-
-            if (buffer.length === 0) {
-                throw new Error('TTS_EMPTY_BUFFER: Synthesis returned 0 bytes')
-            }
-
-            // Verify basic RIFF WAVE header
-            const header = buffer.subarray(0, 4).toString('ascii')
-            const format = buffer.subarray(8, 12).toString('ascii')
-            if (header !== 'RIFF' || format !== 'WAVE') {
-                throw new Error(
-                    `TTS_INVALID_WAV: Expected RIFF/WAVE header, received ${header}/${format}`,
-                )
-            }
-
-            // Atomic write: write to .tmp, then atomic rename
-            fs.writeFileSync(tmpWavPath, buffer)
-            fs.renameSync(tmpWavPath, targetWavPath)
-
-            const hash = crypto
-                .createHash('sha256')
-                .update(buffer)
-                .digest('hex')
-
-            // Approximate PCM duration from standard 48kHz, 24-bit, 1-channel PCM (144,000 bytes/sec)
-            const dataSize = Math.max(0, buffer.length - 44)
-            const durationMs = Math.round((dataSize / 144000) * 1000)
-
-            process.stdout.write(
-                `${cns} [OK] Stem ${line.line_id} synthesized (${buffer.length} bytes, ~${durationMs}ms).\n`,
-            )
-
-            return {
-                lineId: line.line_id,
-                speakerId: line.speaker_id,
-                filePath: targetWavPath,
-                durationMs,
-                sha256: hash,
-            }
-        } catch (err: any) {
-            lastError = err
-            if (fs.existsSync(tmpWavPath)) {
-                try {
-                    fs.unlinkSync(tmpWavPath)
-                } catch (_e) {}
-            }
-            process.stderr.write(
-                `${cns} [WARN] Attempt ${attempt}/${maxRetries} failed for line ${line.line_id}: ${err.message}\n`,
-            )
-            if (attempt < maxRetries) {
-                await new Promise((r) =>
-                    setTimeout(r, 100 * Math.pow(2, attempt)),
-                )
-            }
-        }
-    }
-
-    throw new Error(
-        `TTS_LINE_SYNTHESIS_FAILED: Line ${line.line_id} failed after ${maxRetries} attempts: ${lastError?.message}`,
-    )
-}
-
-export const initSpeech = (cpy: SpeechModel, bal: SpeechBit, _ste: State) => {
-    if (bal.slv) bal.slv({ speechBit: { idx: 'init-speech', val: 1 } })
-    return cpy
-}
-
-export const synthesizeLineAudio = async (
-    cpy: SpeechModel,
-    bal: SpeechBit,
-    _ste: State,
-) => {
-    const line = bal.dat?.line as DialogueLine
-    const endpointUrl = bal.src || cpy.endpointUrl
-    const outputDir = bal.dat?.outputDir || cpy.scratchOutputDir
-    const fetchFn = bal.dat?.fetchFn || fetch
-
+  while (attempt < maxAttempts) {
+    attempt++;
     try {
-        const result = await synthesizeSingleLineWithRetry(
-            line,
-            endpointUrl,
-            outputDir,
-            3,
-            fetchFn,
-        )
-        cpy.totalStemsSynthesized += 1
+      if (fs.existsSync(stagingPath)) {
+        try { fs.unlinkSync(stagingPath); } catch {}
+      }
 
-        if (bal.slv) {
-            bal.slv({
-                speechBit: {
-                    idx: 'synthesize-line-audio',
-                    val: 1,
-                    src: line.line_id,
-                    dat: result,
-                },
-            })
-        }
-    } catch (err: any) {
-        if (bal.slv) {
-            bal.slv({
-                speechBit: {
-                    idx: 'synthesize-line-audio-error',
-                    val: 0,
-                    src: err.message,
-                },
-            })
-        } else {
-            throw err
-        }
-    }
-    return cpy
-}
+      if (global.LIBRARY) {
+        await global.LIBRARY.hunt('[Console action] Update Console', {
+          idx: 'cns00',
+          src: `>> [SPAWN] (${attempt}/${maxAttempts}) Invoking python synthesize.py for line [${item.line_id}] (Speaker: ${item.speaker_id})`,
+        });
+      }
 
-export const synthesizeSceneAudio = async (
-    cpy: SpeechModel,
-    bal: SpeechBit,
-    _ste: State,
-) => {
-    const cns = '>> [SPEECH]'
-    const sceneAst = bal.dat?.ast as SceneAST
-    const endpointUrl = bal.src || cpy.endpointUrl
-    const outputDir = bal.dat?.outputDir || cpy.scratchOutputDir
-    const fetchFn = bal.dat?.fetchFn || fetch
+      const scriptPath = path.resolve('synthesize.py');
+      const args = buildCliArgs(scriptPath, item, stagingPath, engine, seriesId);
 
-    if (!sceneAst || !sceneAst.lines || sceneAst.lines.length === 0) {
-        const errMsg = 'INVALID_AST: Scene contains zero lines for synthesis'
-        process.stderr.write(`${cns} [FAIL] ${errMsg}\n`)
-        if (bal.slv)
-            return bal.slv({
-                speechBit: {
-                    idx: 'synthesize-scene-audio-error',
-                    val: 0,
-                    src: errMsg,
-                },
-            })
-        throw new Error(errMsg)
-    }
-
-    const stems: AudioStemResult[] = []
-
-    for (const line of sceneAst.lines) {
-        try {
-            const stem = await synthesizeSingleLineWithRetry(
-                line,
-                endpointUrl,
-                outputDir,
-                3,
-                fetchFn,
-            )
-            stems.push(stem)
-            cpy.totalStemsSynthesized += 1
-        } catch (err: any) {
-            process.stderr.write(
-                `${cns} [FAIL] Scene synthesis aborted on line ${line.line_id}: ${err.message}\n`,
-            )
-            if (bal.slv) {
-                return bal.slv({
-                    speechBit: {
-                        idx: 'synthesize-scene-audio-error',
-                        val: 0,
-                        src: err.message,
-                        dat: { completedStems: stems },
-                    },
-                })
-            }
-            throw err
-        }
-    }
-
-    const sceneResult: SceneSynthesisResult = {
-        sceneId: sceneAst.scene_id,
-        totalLines: stems.length,
-        stems,
-        completedAtMs: Date.now(),
-    }
-
-    cpy.lastSceneResult = sceneResult
-    process.stdout.write(
-        `${cns} [OK] Scene ${sceneAst.scene_id} audio complete (${stems.length} stems synthesized).\n`,
-    )
-
-    if (bal.slv) {
-        bal.slv({
-            speechBit: {
-                idx: 'synthesize-scene-audio',
-                val: 1,
-                src: sceneAst.scene_id,
-                dat: sceneResult,
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          'python',
+          args,
+          {
+            env: {
+              ...process.env,
+              CUDA_VISIBLE_DEVICES: '',
+              OMP_NUM_THREADS: '4',
             },
-        })
+            timeout: 40000,
+          },
+          (error) => {
+            if (error) reject(error);
+            else resolve();
+          },
+        );
+      });
+
+      const confirmedSize = await pollFileStabilization(stagingPath);
+
+      if (!verifyZeroByteSentinel(stagingPath)) {
+        throw new Error('ZERO_BYTE_POISON_BREACH: Header validation failed or size < 1024 bytes');
+      }
+
+      fs.renameSync(stagingPath, finalPath);
+
+      const fileBuffer = fs.readFileSync(finalPath);
+      const sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      const durationMs = Math.round((confirmedSize - 44) / (48000 * 2 * (24 / 8)) * 1000) || 1000;
+
+      if (global.LIBRARY) {
+        await global.LIBRARY.hunt('[Console action] Update Console', {
+          idx: 'cns00',
+          src: `>> [ATOMIC-COMMIT] [OK] Committed [${filename}] (${confirmedSize} bytes, SHA: ${sha256.substring(0, 8)}...)`,
+        });
+      }
+
+      return {
+        ok: true,
+        line_id: item.line_id,
+        speaker_id: item.speaker_id,
+        target_path: finalPath,
+        byte_size: confirmedSize,
+        sha256,
+        duration_ms: durationMs,
+        execution_ms: Date.now() - lineStart,
+        attempts: attempt,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (fs.existsSync(stagingPath)) {
+        try { fs.unlinkSync(stagingPath); } catch {}
+      }
+
+      if (attempt < maxAttempts) {
+        const backoffMs = 100 * Math.pow(2, attempt - 1);
+        if (global.LIBRARY) {
+          await global.LIBRARY.hunt('[Console action] Update Console', {
+            idx: 'cns00',
+            src: `:: [RETRY] Line [${item.line_id}] failed attempt ${attempt}. Backing off for ${backoffMs}ms: ${err.message}`,
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
     }
-    return cpy
-}
+  }
+
+  const failMsg = lastError ? lastError.message : 'Unknown synthesis failure';
+  if (global.LIBRARY) {
+    await global.LIBRARY.hunt('[Console action] Update Console', {
+      idx: 'cns00',
+      src: `:: [FAIL] Exhausted all ${maxAttempts} attempts for line [${item.line_id}]: ${failMsg}`,
+    });
+  }
+
+  return {
+    ok: false,
+    line_id: item.line_id,
+    speaker_id: item.speaker_id,
+    target_path: finalPath,
+    byte_size: 0,
+    sha256: '',
+    duration_ms: 0,
+    execution_ms: Date.now() - lineStart,
+    attempts: attempt,
+    error: failMsg,
+  };
+};
+
+export const initSpeech = (cpy: SpeechModel, bal: SpeechBit, ste: State) => {
+  if (bal.slv != null) {
+    bal.slv({ spcBit: { idx: 'init-speech', val: 1 } });
+  }
+  return cpy;
+};
+
+export const updateSpeech = (cpy: SpeechModel, bal: SpeechBit, ste: State) => {
+  if (bal.slv != null) {
+    bal.slv({ spcBit: { idx: 'update-speech' } });
+  }
+  return cpy;
+};
+
+export const executeSceneSpeech = async (cpy: SpeechModel, bal: SpeechBit, ste: State) => {
+  cpy.isProcessing = true;
+  try {
+    if (!bal.dat?.request) {
+      throw new Error('MISSING_REQUEST: dat.request payload is required');
+    }
+
+    const validatedReq = SpeechGenerationRequestSchema.parse(bal.dat.request) as SpeechGenerationRequest;
+    const outputDir = path.resolve(validatedReq.output_directory || 'public/audio/dialogue');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    if (global.LIBRARY) {
+      await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `>> [SPEECH] Commencing Scene Audio Synthesis for [${validatedReq.scene_id}] (${validatedReq.items.length} lines) via [${validatedReq.engine}]`,
+      });
+    }
+
+    const receipts: StemSynthesisReceipt[] = [];
+    for (const item of validatedReq.items) {
+      const receipt = await synthesizeSingleLineWithRetry(
+        item,
+        outputDir,
+        validatedReq.engine,
+        validatedReq.series_id,
+        validatedReq.scene_id,
+      );
+      receipts.push(receipt);
+      if (receipt.ok) {
+        cpy.totalStemsSynthesized++;
+      }
+    }
+
+    const successfulStems = receipts.filter((r) => r.ok).length;
+    const failedStems = receipts.filter((r) => !r.ok).length;
+
+    const sceneReceipt: SceneSpeechReceipt = {
+      ok: failedStems === 0,
+      scene_id: validatedReq.scene_id,
+      total_lines: validatedReq.items.length,
+      successful_stems: successfulStems,
+      failed_stems: failedStems,
+      stems: receipts,
+      error: failedStems > 0 ? `${failedStems} stem(s) failed during execution` : undefined,
+    };
+
+    cpy.lastSceneReceipt = sceneReceipt;
+    cpy.isProcessing = false;
+
+    if (global.LIBRARY) {
+      await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `>> [SPEECH] [OK] Scene [${validatedReq.scene_id}] Completed: ${successfulStems}/${validatedReq.items.length} stems synthesized successfully`,
+      });
+    }
+
+    if (bal.slv != null) {
+      bal.slv({
+        spcBit: {
+          idx: 'execute-scene-speech-success',
+          dat: { receipt: sceneReceipt },
+        },
+      });
+    }
+  } catch (err: any) {
+    cpy.isProcessing = false;
+    const errorMsg = err.message || String(err);
+
+    if (global.LIBRARY) {
+      await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: `:: [SPEECH] [FAIL] Scene Speech Execution faulted: ${errorMsg}`,
+      });
+    }
+
+    if (bal.slv != null) {
+      bal.slv({
+        spcBit: {
+          idx: 'execute-scene-speech-error',
+          src: errorMsg,
+        },
+      });
+    }
+  }
+
+  return cpy;
+};

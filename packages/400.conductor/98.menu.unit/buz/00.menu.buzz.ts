@@ -169,6 +169,35 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
 
     // [Task 7.1.2] Interactive Choice Action Switchboard Dispatcher
     switch (selection) {
+
+        case 'SYNTHESIZE SCENE AUDIO STEMS':
+            const bit = await ste.hunt('[Speech action] Execute Scene Speech', {
+                dat: {
+                    request: {
+                        series_id: 'under-the-floorboards',
+                        scene_id: 'ep01_sc01',
+                        engine: 'styletts2',
+                        output_directory: 'public/audio/dialogue',
+                        items: [
+                            {
+                                line_id: 'line_001',
+                                speaker_id: 'char_elias',
+                                dialogue_text: 'The intake valve is rusted through.',
+                                emotion_tag: 'tense_jaw',
+                                tonePacing: 1.0,
+                            },
+                        ],
+                    },
+                },
+            });
+            if (bit?.spcBit?.dat?.receipt?.ok) {
+                await global.LIBRARY.hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: '>> [MENU:SPEECH] Speech generation finished successfully.',
+                });
+            }
+            break;
+
         case 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)': {
             await cns(
                 '>> [FLIGHT-DECK] Triggering Master Scene Lifecycle for ep01_sc01...',
