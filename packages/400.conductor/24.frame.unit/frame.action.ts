@@ -19,4 +19,10 @@ export class QuantizeAcousticClock implements Action {
     constructor(public bale: FrameBit) {}
 }
 
-export type Actions = InitFrame | UpdateFrame | QuantizeAcousticClock
+export const PROBE_STEM_DURATION = '[Frame action] Probe Stem Duration'
+export class ProbeStemDuration implements Action {
+    readonly type = PROBE_STEM_DURATION
+    constructor(public bale: FrameBit) {}
+}
+
+export type Actions = InitFrame | UpdateFrame | QuantizeAcousticClock | ProbeStemDuration

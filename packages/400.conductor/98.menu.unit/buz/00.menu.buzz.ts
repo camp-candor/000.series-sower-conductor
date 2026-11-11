@@ -2,6 +2,7 @@ import { MenuModel } from '../menu.model.js'
 import MenuBit from '../fce/menu.bit.js'
 import State from '../../99.core/state.js'
 import * as ActMnu from '../menu.action.js'
+import * as ActFrm from '../../24.frame.unit/frame.action.js'
 import {
     sanitizeTo7BitAscii,
     formatTelemetryLine,
@@ -19,14 +20,49 @@ import {
     CompositionMetadata,
 } from '../../35.remotion.unit/fce/remotion.interface.js'
 
+export const PROBE_STEM_LABEL = '[2] PROBE UNCOMPRESSED STEM DURATION';
+
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
 
 let rootSlv: any = null
 
+
+export const runStemProbeMenu = async (
+  cpy: MenuModel,
+  bal: MenuBit,
+  ste?: State,
+): Promise<MenuModel> => {
+  if (ste && typeof ste.hunt === 'function') {
+    await ste.hunt('[Console action] Update Console', {
+      idx: 'cns00',
+      src: '>> [MENU] Triggering Uncompressed Stem Duration Probing...',
+    }).catch(() => {});
+
+    await ste.hunt(ActFrm.PROBE_STEM_DURATION, {
+      idx: 'menu-probe-test',
+      dat: {
+        probeRequest: {
+          shot_id: 'ep01_sc01_sh01',
+          wav_path: 'vault/audio/ep01_sc01_sh01.wav',
+          mock_duration_ms: 3120,
+        },
+      },
+    }).catch(() => {});
+  }
+
+  if (bal?.slv) {
+    bal.slv({ mnuBit: { idx: 'run-stem-probe-menu', val: 0 } });
+  }
+
+  return cpy;
+};
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     'RUN MASTER SCENE LIFECYCLE (ep01_sc01)':
         'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
+    [PROBE_STEM_LABEL]:
+        'Probes audio stem durations and traps zero-byte or corrupt payloads.',
     'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE':
         'Chain AST parity, speech synthesis, 24fps exposure sheet, audio-only TSX stamping, and WORM lockfile sealing.',
     'AUDIT DIALOGUE AST CONTRACT':
@@ -47,6 +83,7 @@ export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
 
 export const choices: string[] = [
     'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
+    PROBE_STEM_LABEL,
     'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
     'AUDIT DIALOGUE AST CONTRACT',
     'INSPECT CHARACTER SOMATIC DSP',
@@ -388,6 +425,17 @@ export const updateMenu = async (
     ste: State,
 ): Promise<MenuModel> => {
     if (!global.LIBRARY) {
+
+        if (
+            bal?.src === PROBE_STEM_LABEL ||
+            (bal?.dat as any)?.selection === PROBE_STEM_LABEL
+        ) {
+            cpy.activeSelection = 'CHOICE_PROBE_STEM'
+            cpy.lastActionTimestamp = Date.now()
+            await runStemProbeMenu(cpy, bal, ste)
+            return cpy
+        }
+
         // Headless degradation
         if (
             bal?.src === 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE' ||
@@ -441,6 +489,14 @@ export const updateMenu = async (
     })
 
     const selectedLabel = choiceBit?.chcBit?.src || bal?.src
+
+
+    if (selectedLabel === PROBE_STEM_LABEL) {
+        cpy.activeSelection = 'CHOICE_PROBE_STEM'
+        cpy.lastActionTimestamp = Date.now()
+        await runStemProbeMenu(cpy, bal, ste)
+        return cpy
+    }
 
     if (
         selectedLabel === 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE' ||
