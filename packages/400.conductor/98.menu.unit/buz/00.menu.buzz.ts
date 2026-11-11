@@ -22,6 +22,8 @@ import {
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
 
+let rootSlv: any = null
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     'RUN MASTER SCENE LIFECYCLE (ep01_sc01)':
         'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
@@ -121,12 +123,51 @@ export const CONDUCTOR_MENU_CHOICES = [
     },
 ]
 
-export const initMenu = (cpy: MenuModel, bal: MenuBit, ste: State) => {
+export const initMenu = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste: State,
+): Promise<MenuModel> => {
     cpy.gridLeft = CONDUCTOR_GRID_LEFT
     cpy.gridRight = CONDUCTOR_GRID_RIGHT
     cpy.menuChoices = CONDUCTOR_MENU_CHOICES
-    const bit = { idx: 'init-menu', val: 1 }
-    if (bal.slv != null) bal.slv({ mnuBit: bit, menuBit: bit })
+
+    if (bal?.slv != null) rootSlv = bal.slv
+
+    if (!global.LIBRARY) {
+        const bit = { idx: 'init-menu', val: 1 }
+        if (bal?.slv != null) bal.slv({ mnuBit: bit, menuBit: bit })
+        return cpy
+    }
+
+    const gridBit = await global.LIBRARY.hunt('[Grid action] Update Grid', {
+        x: CONDUCTOR_GRID_RIGHT.x,
+        y: CONDUCTOR_GRID_RIGHT.y,
+        xSpan: CONDUCTOR_GRID_RIGHT.xSpan,
+        ySpan: CONDUCTOR_GRID_RIGHT.ySpan,
+    })
+    await global.LIBRARY.hunt('[Write action] Write Console', {
+        idx: 'cns00',
+        src: '',
+        dat: {
+            net: gridBit?.grdBit?.dat || CONDUCTOR_GRID_RIGHT,
+            src: 'alligator0',
+        },
+    })
+    await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: '-----------',
+    })
+    await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: 'CONDUCTOR FLIGHT DECK',
+    })
+    await global.LIBRARY.hunt('[Console action] Update Console', {
+        idx: 'cns00',
+        src: '-----------',
+    })
+
+    await updateMenu(cpy, bal, ste)
     return cpy
 }
 
@@ -412,7 +453,7 @@ export const updateMenu = async (
     }
 
     const matchedChoice = CONDUCTOR_MENU_CHOICES.find(
-        (c) => c.label === selectedLabel,
+        (c) => c.label === selectedLabel || c.id === selectedLabel,
     )
 
     if (matchedChoice) {
@@ -523,9 +564,18 @@ export const updateMenu = async (
                 await dispatchRemoteAudioPivot(cpy, bal, ste)
                 break
 
-            case 'CHOICE_ROOT_RETURN':
-                if (bal.slv != null) bal.slv({ mnuBit: { idx: 'root-menu' } })
+            case 'CHOICE_ROOT_RETURN': {
+                const slv = bal?.slv || rootSlv
+                rootSlv = null
+                if (slv != null) {
+                    slv({ mnuBit: { idx: 'root-menu' } })
+                } else if (global.LIBRARY) {
+                    await global.LIBRARY.hunt('[Menu action] Open Menu', {
+                        src: '',
+                    })
+                }
                 return cpy
+            }
 
             default:
                 break

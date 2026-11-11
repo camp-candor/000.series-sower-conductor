@@ -59,6 +59,60 @@ describe('packages/400.conductor Phase 11: Blessed Terminal Flight Deck Control 
         expect(updated.idx).toBe('98.menu')
     })
 
+    it('resolves rootSlv and returns cleanly when ROOT MENU is selected', async () => {
+        let rootSlvResolved: any = null
+        const mockHunt = (action: string) => {
+            if (action === '[Open action] Open Choice') {
+                return Promise.resolve({ chcBit: { src: 'ROOT MENU' } })
+            }
+            return Promise.resolve({ grdBit: { dat: {} } })
+        }
+        ;(global as any).LIBRARY = { hunt: mockHunt }
+
+        const model = new MenuModel()
+        // Save rootSlv in initMenu
+        await initMenu(
+            model,
+            {
+                idx: 'init-test',
+                slv: (res: any) => {
+                    rootSlvResolved = res
+                },
+            },
+            {} as any,
+        )
+
+        // Run updateMenu where user selects ROOT MENU
+        const updated = await updateMenu(model, {} as any, {} as any)
+        expect(updated).toBeDefined()
+        expect(rootSlvResolved).toBeDefined()
+        expect(rootSlvResolved.mnuBit.idx).toBe('root-menu')
+
+        delete (global as any).LIBRARY
+    })
+
+    it('falls back to global.LIBRARY Open Menu if rootSlv was not provided', async () => {
+        let openMenuTriggered = false
+        const mockHunt = (action: string) => {
+            if (action === '[Open action] Open Choice') {
+                return Promise.resolve({ chcBit: { src: 'ROOT MENU' } })
+            }
+            if (action === '[Menu action] Open Menu') {
+                openMenuTriggered = true
+                return Promise.resolve({})
+            }
+            return Promise.resolve({ grdBit: { dat: {} } })
+        }
+        ;(global as any).LIBRARY = { hunt: mockHunt }
+
+        const model = new MenuModel()
+        // Run updateMenu without initMenu/slv
+        await updateMenu(model, {} as any, {} as any)
+        expect(openMenuTriggered).toBe(true)
+
+        delete (global as any).LIBRARY
+    })
+
     it('asserts 100% pure 7-bit ASCII compliance across all menu unit files', () => {
         const files = [
             'packages/400.conductor/98.menu.unit/fce/menu.interface.ts',

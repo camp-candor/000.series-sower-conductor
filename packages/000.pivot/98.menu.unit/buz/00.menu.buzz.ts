@@ -124,7 +124,13 @@ export const updateMenu = async (cpy: MenuModel, bal: MenuBit, ste: State) => {
             break
 
         case 'ROOT MENU':
-            if (rootSlv != null) rootSlv({ mnuBit: { idx: 'root-menu' } })
+            if (rootSlv != null) {
+                rootSlv({ mnuBit: { idx: 'root-menu' } })
+            } else if (global.LIBRARY) {
+                await global.LIBRARY.hunt('[Menu action] Open Menu', {
+                    src: '',
+                })
+            }
             return cpy
 
         default:

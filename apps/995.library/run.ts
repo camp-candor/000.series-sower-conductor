@@ -304,8 +304,13 @@ const init = async () => {
                     idx: 'cns00',
                     src: '>> [RUNNER] Booting Conductor Flight Deck (packages/400.conductor)...',
                 })
-                await sim.hunt(ActMnu.INIT_MENU, {})
-                await sim.hunt(ActMnu.UPDATE_MENU, {})
+                await sim.hunt(ActMnu.INIT_MENU, {
+                    slv: async () => {
+                        await LIBRARY.hunt(MENU_ACTION_LIBRARY.OPEN_MENU, {
+                            src: '',
+                        })
+                    },
+                })
                 return
             } catch (err: any) {
                 await LIBRARY.hunt(CONSOLE_ACTION_LIBRARY.UPDATE_CONSOLE, {
