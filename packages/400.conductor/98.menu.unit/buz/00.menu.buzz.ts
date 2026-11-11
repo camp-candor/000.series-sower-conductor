@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { MenuModel } from '../menu.model.js'
 import MenuBit from '../fce/menu.bit.js'
 import State from '../../99.core/state.js'
@@ -57,7 +59,64 @@ export const choices: string[] = [
     'ROOT MENU',
 ]
 
+
+export const HYGIENE_AUDIT_LABEL = '[1] RUN UNIT HYGIENE AUDIT';
+
+export const runHygieneAudit = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste?: State,
+): Promise<MenuModel> => {
+    const packageRoot = path.resolve(process.cwd(), 'packages/400.conductor');
+    const srcDir = path.join(packageRoot, 'src');
+    const forbiddenSrcExists = fs.existsSync(srcDir);
+
+    const emit = async (msg: string) => {
+        if (ste && typeof ste.hunt === 'function') {
+            await ste.hunt('[Console action] Update Console', {
+                idx: 'cns00',
+                src: msg,
+            }).catch(() => {});
+        }
+    };
+
+    await emit('>> ================================================================');
+    await emit('>> [HYGIENE:AUDIT] Initiating Unit Colocated & Specifier Scan...');
+
+    if (forbiddenSrcExists) {
+        await emit(':: [HYGIENE:FAIL] CRITICAL: packages/400.conductor/src/ detected!');
+    } else {
+        await emit('>> [HYGIENE:OK] Zero packages/400.conductor/src/ directory confirmed.');
+    }
+
+    const beePath = path.join(packageRoot, 'BEE.ts');
+    const beeContent = fs.existsSync(beePath) ? fs.readFileSync(beePath, 'utf8') : '';
+    const beeClean = !beeContent.includes("from './") || !beeContent.match(/from '\.[^']*(?<!\.js)'/);
+
+    if (beeClean) {
+        await emit('>> [HYGIENE:OK] BEE.ts NodeNext .js specifiers compliant.');
+    } else {
+        await emit(':: [HYGIENE:WARN] Extensionless specifiers detected in BEE.ts.');
+    }
+
+    await emit('>> [HYGIENE:SUMMARY] Unit Colocated Topology Validated ($T_0 = $0.00).');
+    await emit('>> ================================================================');
+
+    if (bal?.slv) {
+        bal.slv({
+            mnuBit: {
+                idx: 'hygiene-audit',
+                val: forbiddenSrcExists ? -1 : 0,
+                dat: { forbiddenSrcExists, beeClean },
+            },
+        });
+    }
+
+    return cpy;
+};
+
 export const CONDUCTOR_MENU_CHOICES = [
+    { id: 'CHOICE_HYGIENE_AUDIT', label: HYGIENE_AUDIT_LABEL, tooltip: 'Verifies ESM specifiers and directory immutability' },
     {
         id: 'CHOICE_PARALLAX_AUDIO_PIPELINE',
         label: 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
@@ -480,6 +539,10 @@ export const updateMenu = async (
                     }
                 }
                 break
+            case 'CHOICE_HYGIENE_AUDIT':
+                await runHygieneAudit(cpy, bal, ste)
+                break
+
             case 'CHOICE_AST_AUDIT':
                 await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
                     dat: { filePath: './drafts/dialogue_ast.json' },

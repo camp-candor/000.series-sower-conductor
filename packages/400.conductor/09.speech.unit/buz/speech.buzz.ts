@@ -1,3 +1,4 @@
+import { request } from 'node:http'
 import { SpeechModel } from '../speech.model.js'
 import SpeechBit from '../fce/speech.bit.js'
 import {
@@ -401,3 +402,76 @@ export const verifyNonSilentWavPcm = (
         return { ok: false, rms: 0, peak: 0, sampleCount: 0 }
     }
 }
+
+export const synthesizeSpeech = async (
+    cpy: SpeechModel,
+    bal: SpeechBit,
+    ste?: State,
+): Promise<SpeechModel> => {
+    const text = bal.src || '';
+    const voiceId = (bal.dat as { voiceId?: string })?.voiceId || 'pilot';
+    const host = process.env.TTS_HOST || '127.0.0.1';
+    const port = Number(process.env.TTS_PORT || 8000);
+
+    const payload = JSON.stringify({ text, voice: voiceId });
+
+    if (ste && typeof ste.hunt === 'function') {
+        await ste.hunt('[Console action] Update Console', {
+            idx: 'cns00',
+            src: `>> [SPEECH] Synthesizing acoustic stem for voice [${voiceId}] via http://${host}:${port}`,
+        }).catch(() => {});
+    }
+
+    const result = await new Promise<{ status: string; path?: string }>((resolve, reject) => {
+        const req = request(
+            {
+                hostname: host,
+                port,
+                path: '/synthesize',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(payload),
+                },
+                timeout: 10000,
+            },
+            (res: any) => {
+                let data = '';
+                res.on('data', (chunk: any) => { data += chunk; });
+                res.on('end', () => {
+                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            resolve({ status: 'OK', path: parsed.output_path });
+                        } catch {
+                            resolve({ status: 'OK', path: data.trim() });
+                        }
+                    } else {
+                        reject(new Error(`TTS synthesis failed with status code ${res.statusCode}`));
+                    }
+                });
+            },
+        );
+
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('TTS synthesis timed out after 10000ms'));
+        });
+
+        req.on('error', (err: any) => reject(err));
+        req.write(payload);
+        req.end();
+    }).catch((err: Error) => ({ status: 'ERR', error: err.message }));
+
+    if (bal.slv) {
+        bal.slv({
+            spcBit: {
+                idx: 'synthesize-speech',
+                val: result.status === 'OK' ? 0 : -1,
+                dat: result,
+            },
+        });
+    }
+
+    return cpy;
+};
