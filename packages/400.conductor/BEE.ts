@@ -1,5 +1,6 @@
 import ConductorUnit from './00.conductor.unit/conductor.unit.js'
 import LogisticUnit from './04.logistic.unit/logistic.unit.js'
+import TypesUnit from './07.types.unit/types.unit.js';
 import SqliteUnit from './08.sqlite.unit/sqlite.unit.js'
 import SpeechUnit from './09.speech.unit/speech.unit.js'
 import Speech from './09.speech.unit/fce/speech.interface.js'
@@ -11,6 +12,8 @@ import { SomaticdspModel } from './10.somaticdsp.unit/somaticdsp.model.js'
 import { reducer as somaticdspReducer } from './10.somaticdsp.unit/somaticdsp.reduce.js'
 import LedgerUnit from './21.ledger.unit/ledger.unit.js'
 import FrameUnit from './24.frame.unit/frame.unit.js'
+import DialogueUnit from './25.dialogue.unit/dialogue.unit.js'
+import EpisodeUnit from './25.episode.unit/episode.unit.js'
 import Frame from './24.frame.unit/fce/frame.interface.js'
 import { FrameModel } from './24.frame.unit/frame.model.js'
 import VramUnit from './26.vram.unit/vram.unit.js'
@@ -25,14 +28,15 @@ import AssetUnit from './33.asset.unit/asset.unit.js'
 import AbstractSyntaxTreeUnit from './34.abstractsyntaxtree.unit/abstractsyntaxtree.unit.js'
 import RemotionUnit from './35.remotion.unit/remotion.unit.js'
 import EdgeBridgeUnit from './36.edgebridge.unit/edgebridge.unit.js'
-import LifecycleUnit from './37.lifecycle.unit/lifecycle.unit.js'
-import MenuUnit from './98.menu.unit/menu.unit.js'
+import MasterLifecycleUnit from './37.lifecycle.unit/lifecycle.unit.js';
+import MenuUnit from './98.menu.unit/menu.unit.js';
 import { RemotionModel } from './35.remotion.unit/remotion.model.js'
 import { EdgeBridgeModel } from './36.edgebridge.unit/edgebridge.model.js'
 import { LifecycleModel } from './37.lifecycle.unit/lifecycle.model.js'
 import { Model } from './99.core/interface/model.interface.js'
 
 export const list: Array<any> = [
+    TypesUnit,
     ConductorUnit,
     LogisticUnit,
     SqliteUnit,
@@ -40,6 +44,8 @@ export const list: Array<any> = [
     SomaticdspUnit,
     LedgerUnit,
     FrameUnit,
+    DialogueUnit,
+    EpisodeUnit,
     VramUnit,
     CudaUnit,
     CpusUnit,
@@ -50,7 +56,7 @@ export const list: Array<any> = [
     AbstractSyntaxTreeUnit,
     RemotionUnit,
     EdgeBridgeUnit,
-    LifecycleUnit,
+    MasterLifecycleUnit,
     MenuUnit,
 ]
 
@@ -61,6 +67,8 @@ import * as reduceFromSpeech from './09.speech.unit/speech.reduce.js'
 import * as reduceFromSomaticdsp from './10.somaticdsp.unit/somaticdsp.reduce.js'
 import * as reduceFromLedger from './21.ledger.unit/ledger.reduce.js'
 import * as reduceFromFrame from './24.frame.unit/frame.reduce.js'
+import * as reduceFromDialogue from './25.dialogue.unit/dialogue.reduce.js'
+import * as reduceFromEpisode from './25.episode.unit/episode.reduce.js'
 import * as reduceFromVram from './26.vram.unit/vram.reduce.js'
 import * as reduceFromCuda from './27.cuda.unit/cuda.reduce.js'
 import * as reduceFromCpus from './28.cpus.unit/cpus.reduce.js'
@@ -82,6 +90,8 @@ export const reducer: any = {
     somaticdsp: reduceFromSomaticdsp.reducer,
     ledger: reduceFromLedger.reducer,
     frame: reduceFromFrame.reducer,
+    dialogue: reduceFromDialogue.reducer,
+    episode: reduceFromEpisode.reducer,
     vram: reduceFromVram.reducer,
     cuda: reduceFromCuda.reducer,
     cpus: reduceFromCpus.reducer,
@@ -106,6 +116,8 @@ export default class UnitData implements Model {
   somaticdsp: any;
   ledger: any;
   frame: Frame = new FrameModel();
+  dialogue: any = undefined;
+  episode: any = undefined;
   vram: any;
   cuda: any;
   cpus: any;
