@@ -19,6 +19,9 @@ export function reducer(
         case Act.QUANTIZE_ACOUSTIC_CLOCK:
             return Buzz.quantizeAcousticClock(clone(model), act.bale, state!)
 
+        case Act.PROBE_STEM_DURATION:
+            return Buzz.probeStemDuration(clone(model), act.bale as any, state!)
+
         default:
             return model
     }
