@@ -1,3 +1,29 @@
+export interface AudioSpecification {
+  sample_rate_hz: 48000;
+  bit_depth: 24;
+  channels: 1 | 2;
+  codec: 'pcm_s24le';
+}
+
+export interface StemProbeRequest {
+  shot_id: string;
+  wav_path: string;
+  expected_sha256?: string;
+  mock_duration_ms?: number;
+}
+
+export interface StemProbeResult {
+  ok: boolean;
+  shot_id: string;
+  wav_path: string;
+  duration_ms: number;
+  sample_count: number;
+  file_size_bytes: number;
+  sha256: string;
+  audio_spec: AudioSpecification;
+  error?: string;
+}
+
 export interface RawStemDuration {
     shot_id: string
     duration_ms: number
