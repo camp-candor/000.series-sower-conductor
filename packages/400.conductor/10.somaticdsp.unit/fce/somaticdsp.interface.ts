@@ -32,18 +32,26 @@ export type BannedCadence =
     | 'CHEERFUL_MODULATION'
     | 'SING_SONG_RESONANCE'
 
+export interface SomaticMeters {
+    somaticFatigueBps: number
+    physicalPainBps: number
+    refusalStrainBps: number
+    paranoiaPressureBps: number
+}
+
 export interface CharacterSomaticState {
     character_id: string
-    fatigue_bps: number // 0..10000 bps
-    pain_bps: number // 0..10000 bps
-    refusal_strain_bps: number // 0..10000 bps
+    fatigue_bps: number
+    pain_bps: number
+    refusal_strain_bps?: number
     is_conscious: boolean
-    active_conditions: VocalTractCondition[]
+    active_conditions: string[]
     banned_kinetic_verbs: string[]
 }
 
 export interface DialogueSomaticInput {
     character_id: string
+    dialogue_text?: string
     base_pitch_shift_semitones?: number
     pitch_shift_cents?: number
     formant_warping_factor?: number
@@ -52,32 +60,33 @@ export interface DialogueSomaticInput {
     breathiness_bps?: number
     base_vocal_fry?: number
     vocal_fry_bps?: number
+    base_speed_scalar?: number
 }
 
 export interface AcousticDspModifiers {
-    effective_pitch_semitones: number
-    effective_formant_warping: number
-    effective_breathiness_multiplier: number
+    basePitchShiftSemitones?: number
+    formantWarpingFactor?: number
+    breathinessPauseMultiplier?: number
     pause_frequency_multiplier: number
-    effective_vocal_fry_density: number
-    target_lufs: number
-    peak_dbtp: number
-    banned_cadences: BannedCadence[]
+    vocalFryDensity?: number
+    tonePacing?: number
+    target_lufs: -16.0
+    peak_dbtp: -1.0
+    bannedCadences?: string[]
+    effective_pitch_semitones?: number
+    effective_formant_warping?: number
+    effective_breathiness_multiplier?: number
+    effective_vocal_fry_density?: number
+    banned_cadences?: BannedCadence[]
 }
 
 export interface SomaticDspReceipt {
     ok: boolean
     character_id: string
+    dsp_modifiers?: AcousticDspModifiers
     modifiers?: AcousticDspModifiers
+    error?: string
     breach_reason?: string
-}
-
-// Feature 2.1 (v1) Legacy Interface Contracts
-export interface SomaticMeters {
-    somaticFatigueBps: number
-    physicalPainBps: number
-    refusalStrainBps: number
-    paranoiaPressureBps: number
 }
 
 export interface SomaticDspInput {
@@ -100,8 +109,8 @@ export interface TTSDspModifiers {
     breathinessPauseMultiplier: number
     pause_frequency_multiplier: number
     vocalFryDensity: number
-    target_lufs: number
-    peak_dbtp: number
+    target_lufs: -16.0
+    peak_dbtp: -1.0
     bannedCadences: string[]
 }
 
@@ -115,8 +124,8 @@ export interface TTSGenerationPayload {
 
 export default interface Somaticdsp {
     idx: string
+    characterProfiles: Record<string, CharacterSomaticState>
+    lastReceipt?: SomaticDspReceipt
     totalTranslationsExecuted?: number
     lastTranslatedPayload?: TTSGenerationPayload | null
-    characterProfiles?: Record<string, CharacterSomaticState>
-    lastReceipt?: SomaticDspReceipt
 }

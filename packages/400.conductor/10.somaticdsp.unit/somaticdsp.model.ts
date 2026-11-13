@@ -1,13 +1,14 @@
-import Somaticdsp, {
+import type Somaticdsp from './fce/somaticdsp.interface.js'
+import type {
     CharacterSomaticState,
     SomaticDspReceipt,
     TTSGenerationPayload,
 } from './fce/somaticdsp.interface.js'
 
 export class SomaticdspModel implements Somaticdsp {
-    idx: string = '10.somaticdsp'
-    totalTranslationsExecuted: number = 0
-    lastTranslatedPayload: TTSGenerationPayload | null = null
+    idx = '10.somaticdsp'
     characterProfiles: Record<string, CharacterSomaticState> = {}
     lastReceipt?: SomaticDspReceipt
+    totalTranslationsExecuted: number = 0
+    lastTranslatedPayload: TTSGenerationPayload | null = null
 }

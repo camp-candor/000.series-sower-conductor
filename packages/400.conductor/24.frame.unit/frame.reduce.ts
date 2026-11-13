@@ -22,6 +22,20 @@ export function reducer(
         case Act.PROBE_STEM_DURATION:
             return Buzz.probeStemDuration(clone(model), act.bale as any, state!)
 
+        case Act.TILE_TIMELINE_FRAMES:
+            return Buzz.tileTimelineFrames(
+                clone(model),
+                act.bale as any,
+                state!,
+            )
+
+        case Act.CONFORM_FRAME_LATTICE:
+            return Buzz.conformFrameLattice(
+                clone(model),
+                act.bale as any,
+                state!,
+            )
+
         default:
             return model
     }

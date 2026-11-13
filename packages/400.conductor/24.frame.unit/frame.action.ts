@@ -25,4 +25,22 @@ export class ProbeStemDuration implements Action {
     constructor(public bale: FrameBit) {}
 }
 
-export type Actions = InitFrame | UpdateFrame | QuantizeAcousticClock | ProbeStemDuration
+export const TILE_TIMELINE_FRAMES = '[Frame action] Tile Timeline Frames'
+export class TileTimelineFrames implements Action {
+    readonly type = TILE_TIMELINE_FRAMES
+    constructor(public bale: FrameBit) {}
+}
+
+export const CONFORM_FRAME_LATTICE = '[Frame action] Conform Frame Lattice'
+export class ConformFrameLattice implements Action {
+    readonly type = CONFORM_FRAME_LATTICE
+    constructor(public bale: FrameBit) {}
+}
+
+export type Actions =
+    | InitFrame
+    | UpdateFrame
+    | QuantizeAcousticClock
+    | ProbeStemDuration
+    | TileTimelineFrames
+    | ConformFrameLattice

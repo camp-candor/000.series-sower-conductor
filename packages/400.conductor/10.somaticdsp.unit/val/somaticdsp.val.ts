@@ -4,12 +4,6 @@ export const VocalTractConditionSchema = z.enum([
     'mute',
     'cnd_vocal_cord_transected',
     'crushed_larynx',
-    'cnd_crushed_laryngeal_cartilage',
-    'cnd_severe_hypothermia',
-    'cnd_physiological_shock',
-    'cnd_pulmonary_fibrosis_stage_1',
-    'cnd_gas_inhalation_damage',
-    'cnd_spinal_vertebral_compression',
     'bilateral_vocal_cord_paralysis',
     'punctured_lung',
     'acute_asphyxiation',
@@ -19,8 +13,6 @@ export const VocalTractConditionSchema = z.enum([
 export const BannedCadenceSchema = z.enum([
     'RAPID_STACCATO',
     'RISING_INFLECTION_INTERROGATIVE',
-    'RISING_INFLECTION',
-    'MONOTONE_FLAT',
     'CHEERFUL_MODULATION',
     'UPBEAT_LILT',
     'SING_SONG_RESONANCE',
@@ -28,19 +20,20 @@ export const BannedCadenceSchema = z.enum([
 
 export const CharacterSomaticStateSchema = z
     .object({
-        character_id: z.string().regex(/^char_[a-z0-9_]+$/),
+        character_id: z.string().min(1),
         fatigue_bps: z.number().int().min(0).max(10000),
         pain_bps: z.number().int().min(0).max(10000),
-        refusal_strain_bps: z.number().int().min(0).max(10000),
+        refusal_strain_bps: z.number().int().min(0).max(10000).optional(),
         is_conscious: z.boolean().default(true),
-        active_conditions: z.array(VocalTractConditionSchema).default([]),
+        active_conditions: z.array(z.string()).default([]),
         banned_kinetic_verbs: z.array(z.string().min(1)).default([]),
     })
     .strict()
 
 export const DialogueSomaticInputSchema = z
     .object({
-        character_id: z.string().regex(/^char_[a-z0-9_]+$/),
+        character_id: z.string().min(1),
+        dialogue_text: z.string().min(1),
         base_pitch_shift_semitones: z
             .number()
             .min(-12.0)
@@ -53,5 +46,6 @@ export const DialogueSomaticInputSchema = z
         breathiness_bps: z.number().int().min(0).max(10000).default(0),
         base_vocal_fry: z.number().min(0.0).max(1.0).default(0.0),
         vocal_fry_bps: z.number().int().min(0).max(10000).default(0),
+        base_speed_scalar: z.number().min(0.1).max(3.0).default(1.0),
     })
     .strict()

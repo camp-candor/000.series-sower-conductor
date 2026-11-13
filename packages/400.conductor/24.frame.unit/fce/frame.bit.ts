@@ -4,6 +4,10 @@ import {
     TimelineQuantizationReceipt,
     StemProbeRequest,
     StemProbeResult,
+    TimelineShotInput,
+    TimelineTilingResult,
+    ShotLatticeRequest,
+    LatticeConformanceResult,
 } from './frame.interface.js'
 
 export default interface FrameBit {
@@ -19,6 +23,10 @@ export default interface FrameBit {
         probeRequest?: StemProbeRequest
         probeResult?: StemProbeResult
         mockDurationMs?: number
+        tilingRequest?: TimelineShotInput[]
+        tilingResult?: TimelineTilingResult
+        latticeRequest?: ShotLatticeRequest[]
+        latticeResult?: LatticeConformanceResult
     }
     slv?: Function
 }
