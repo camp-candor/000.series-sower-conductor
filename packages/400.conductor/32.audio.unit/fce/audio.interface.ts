@@ -3,8 +3,19 @@ export interface DialogueWindow {
     shot_id: string
     from_frame: number
     to_frame: number
-    stem_path: string
-    speaker_id: string
+    stem_path?: string
+    speaker_id?: string
+}
+
+export interface SilenceWindow {
+    from_frame: number
+    to_frame: number
+    duck_ambient_db: number
+}
+
+export interface DuckingGainNode {
+    frame: number
+    gain: number
 }
 
 export interface FoleyCueItem {
@@ -15,9 +26,14 @@ export interface FoleyCueItem {
     volume: number
 }
 
-export interface DuckingGainNode {
-    frame: number
-    gain: number
+export interface MultiTrackAudioPlan {
+    total_frames: number
+    base_volume: number
+    attenuation_db: number
+    dialogue_windows: DialogueWindow[]
+    silence_windows: SilenceWindow[]
+    gain_curve: DuckingGainNode[]
+    foley_cues: FoleyCueItem[]
 }
 
 export interface ExposureSheetShotTrack {
@@ -61,7 +77,8 @@ export interface ExposureSheetReceipt {
 
 export default interface Audio {
     idx: string
-    isAssembling: boolean
+    isAssembling?: boolean
     lastExposureSheet?: ExposureSheetDocument
     lastReceipt?: ExposureSheetReceipt
+    lastPlan?: MultiTrackAudioPlan
 }

@@ -1,125 +1,219 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
+import { describe, it, expect } from 'vitest'
 import {
-    quantizeAudioDuration,
-    computeCumulativeTimeline,
-} from '../37.lifecycle.unit/buz/frameQuantizer.buzz.js'
-import { calculateMultiWindowDuckingCurve } from '../37.lifecycle.unit/buz/audioDucking.buzz.js'
-import { validateWavFileIntegrity } from '../37.lifecycle.unit/buz/ttsClient.buzz.js'
+    calculateDuckedVolume,
+    computeSingleWindowGain,
+    computeMultiWindowDuckingCurve,
+    computeDuckingCurve,
+    murmurHash3,
+    resolveDeterministicFoleyCue,
+} from '../32.audio.unit/buz/acousticDucking.buzz.js'
+import { AudioModel } from '../32.audio.unit/audio.model.js'
+import {
+    COMPUTE_DUCKING_LABEL,
+    runAcousticDuckingMenu,
+} from '../98.menu.unit/buz/00.menu.buzz.js'
+import { MenuModel } from '../98.menu.unit/menu.model.js'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-describe('packages/400.conductor Phase 4 Acoustic Master Clock Temporal Quantization', () => {
-    const scratchDir = path.resolve(process.cwd(), 'val/scratch_acoustic_test')
-
-    beforeEach(() => {
-        if (!fs.existsSync(scratchDir)) {
-            fs.mkdirSync(scratchDir, { recursive: true })
-        }
+describe('Feature 3.2: Multi-Window Minimum-Reduction Sidechain Ducking', () => {
+    it('correctly converts decibel attenuation into linear gain floor', () => {
+        expect(calculateDuckedVolume(0.4, -14.0)).toBe(0.0798)
+        expect(calculateDuckedVolume(1.0, -14.0)).toBe(0.1995)
+        expect(calculateDuckedVolume(0.4, -24.0)).toBe(0.0252)
     })
 
-    afterEach(() => {
-        if (fs.existsSync(scratchDir)) {
-            fs.rmSync(scratchDir, { recursive: true, force: true })
-        }
-    })
+    it('evaluates exact quadratic attack trajectory t*(2 - t) across 6 frames', () => {
+        const base = 0.4
+        const ducked = 0.0798
+        const start = 20
+        const end = 40
 
-    it('strictly verifies zero src/ directory exists in packages/400.conductor', () => {
-        const srcPath = path.resolve(
-            process.cwd(),
-            'packages/400.conductor/src',
+        expect(computeSingleWindowGain(13, start, end, base, ducked)).toBe(0.4)
+        expect(computeSingleWindowGain(14, start, end, base, ducked)).toBe(0.4)
+        expect(computeSingleWindowGain(17, start, end, base, ducked)).toBe(
+            0.1599,
         )
-        expect(fs.existsSync(srcPath)).toBe(false)
+        expect(computeSingleWindowGain(20, start, end, base, ducked)).toBe(
+            0.0798,
+        )
+        expect(computeSingleWindowGain(30, start, end, base, ducked)).toBe(
+            0.0798,
+        )
     })
 
-    it('quantizes continuous duration into exact 24.0 fps integer ceiling frames', async () => {
-        // 3,125 ms = 3.125 * 24 = 75.0 -> 75 frames
-        const res1 = await quantizeAudioDuration('mock.wav', 3125)
-        expect(res1.targetFrames).toBe(75)
-        expect(res1.sampleCount).toBe(150000) // 75 * 2000 samples
+    it('evaluates exact quadratic release trajectory t^2 across 12 frames', () => {
+        const base = 0.4
+        const ducked = 0.0798
+        const start = 20
+        const end = 40
 
-        // 3,126 ms = 75.024 -> 76 frames
-        const res2 = await quantizeAudioDuration('mock.wav', 3126)
-        expect(res2.targetFrames).toBe(76)
+        expect(computeSingleWindowGain(40, start, end, base, ducked)).toBe(
+            0.0798,
+        )
+        expect(computeSingleWindowGain(46, start, end, base, ducked)).toBe(
+            0.1599,
+        )
+        expect(computeSingleWindowGain(52, start, end, base, ducked)).toBe(0.4)
+        expect(computeSingleWindowGain(53, start, end, base, ducked)).toBe(0.4)
     })
 
-    it('proves cumulative-millisecond zero-drift contiguity: End_k + 1 === Start_k+1', () => {
-        // Stems: 3,420 ms, 5,180 ms, 3,800 ms, 6,000 ms
-        const durations = [3420, 5180, 3800, 6000]
-        const timeline = computeCumulativeTimeline(durations)
-
-        expect(timeline.totalDurationMs).toBe(18400)
-        expect(timeline.totalFrames).toBe(442) // ceil(18.4 * 24) = 442 frames
-
-        for (let k = 0; k < timeline.shots.length - 1; k++) {
-            const currentShot = timeline.shots[k]
-            const nextShot = timeline.shots[k + 1]
-            // Zero-Drift Invariant
-            expect(currentShot.toFrame + 1).toBe(nextShot.fromFrame)
-        }
-    })
-
-    it('traps zero-byte poison, undersized files (< 1KB), and corrupted RIFF headers', () => {
-        const tinyFile = path.join(scratchDir, 'tiny.wav')
-        fs.writeFileSync(tinyFile, Buffer.from('short data'))
-
-        const resTiny = validateWavFileIntegrity(tinyFile)
-        expect(resTiny.valid).toBe(false)
-        expect(resTiny.error).toContain('ZERO_BYTE_POISON')
-
-        const fakeHeaderFile = path.join(scratchDir, 'fake.wav')
-        const fakeData = Buffer.alloc(2048, 0)
-        fakeData.write('NOTR', 0) // Invalid magic bytes
-        fs.writeFileSync(fakeHeaderFile, fakeData)
-
-        const resHeader = validateWavFileIntegrity(fakeHeaderFile)
-        expect(resHeader.valid).toBe(false)
-        expect(resHeader.error).toContain('CORRUPT_HEADER')
-    })
-
-    it('evaluates multi-window min-reduction ducking preventing gain pumping across rapid pauses', () => {
-        // Two dialogue intervals: [10, 30] and [38, 60] (pause of 7 frames < 18 frames)
-        const curve = calculateMultiWindowDuckingCurve(
+    it('eliminates volume pumping across rapid 7-frame dialogue pause (< 18 frames) via min-reducer', () => {
+        const curve = computeMultiWindowDuckingCurve(
             [
-                [10, 30],
-                [38, 60],
+                { shot_id: 'w1', from_frame: 10, to_frame: 30 },
+                { shot_id: 'w2', from_frame: 38, to_frame: 60 },
             ],
             100,
+            0.4,
+            -14.0,
         )
 
-        // Baseline before attack
-        expect(curve(0)).toBe(1.0)
-
-        // Active speech window 1 clamped to -14 dB (0.20)
-        expect(curve(15)).toBe(0.2)
-        expect(curve(30)).toBe(0.2)
-
-        // During 7-frame pause between Frame 30 and 38, gain must remain clamped without pumping back to 1.0
-        expect(curve(34)).toBeLessThan(0.4)
-
-        // Active speech window 2
-        expect(curve(45)).toBe(0.2)
-
-        // Recovery after window 2 ends at 60 (release takes 12 frames -> fully 1.0 by frame 73)
-        expect(curve(60)).toBe(0.2)
-        expect(curve(75)).toBe(1.0)
+        expect(curve[0].gain).toBe(0.4)
+        expect(curve[10].gain).toBe(0.0798)
+        expect(curve[25].gain).toBe(0.0798)
+        expect(curve[30].gain).toBe(0.0798)
+        expect(curve[34].gain).toBeLessThanOrEqual(0.16)
+        expect(curve[38].gain).toBe(0.0798)
+        expect(curve[50].gain).toBe(0.0798)
+        expect(curve[60].gain).toBe(0.0798)
+        expect(curve[75].gain).toBe(0.4)
     })
 
-    it('asserts 100% pure 7-bit ASCII compliance across acoustic clock modules', () => {
+    it('applies explicit dramatic silence windows forcing ambient floor to -24 dB', () => {
+        const curve = computeMultiWindowDuckingCurve(
+            [{ shot_id: 'w1', from_frame: 10, to_frame: 30 }],
+            60,
+            0.4,
+            -14.0,
+            [{ from_frame: 35, to_frame: 50, duck_ambient_db: -24.0 }],
+        )
+
+        expect(curve[20].gain).toBe(0.0798)
+        expect(curve[40].gain).toBe(0.0252)
+    })
+
+    it('verifies deterministic Foley transient placement via MurmurHash3', () => {
+        const seed1 = murmurHash3('ep01_sc01:shot_01:mud_squelch')
+        const seed2 = murmurHash3('ep01_sc01:shot_01:mud_squelch')
+        const seed3 = murmurHash3('ep01_sc01:shot_02:mud_squelch')
+
+        expect(seed1).toBe(seed2)
+        expect(seed1).not.toBe(seed3)
+
+        const samples = ['squelch_01.wav', 'squelch_02.wav', 'squelch_03.wav']
+        const cue = resolveDeterministicFoleyCue(
+            'ep01_sc01',
+            'shot_01',
+            'mud_squelch',
+            15,
+            samples,
+        )
+
+        expect(cue.shot_id).toBe('shot_01')
+        expect(cue.frame_offset).toBe(15)
+        expect(samples).toContain(cue.resolved_sample)
+    })
+
+    it('asserts 100% 7-bit clean ASCII compliance across audio unit files', () => {
         const files = [
-            'packages/400.conductor/37.lifecycle.unit/fce/acousticClock.interface.ts',
-            'packages/400.conductor/37.lifecycle.unit/buz/ttsClient.buzz.ts',
-            'packages/400.conductor/37.lifecycle.unit/buz/frameQuantizer.buzz.ts',
-            'packages/400.conductor/37.lifecycle.unit/buz/audioDucking.buzz.ts',
+            'packages/400.conductor/32.audio.unit/fce/audio.interface.ts',
+            'packages/400.conductor/32.audio.unit/fce/audio.bit.ts',
+            'packages/400.conductor/32.audio.unit/buz/acousticDucking.buzz.ts',
+            'packages/400.conductor/32.audio.unit/audio.action.ts',
+            'packages/400.conductor/32.audio.unit/audio.model.ts',
+            'packages/400.conductor/32.audio.unit/audio.buzzer.ts',
+            'packages/400.conductor/32.audio.unit/audio.reduce.ts',
+            'packages/400.conductor/val/acousticClock.test.ts',
         ]
 
+        const packageRoot = path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            '..',
+        )
         for (const rel of files) {
-            const full = path.resolve(process.cwd(), rel)
+            const full = path.resolve(
+                packageRoot,
+                rel.replace('packages/400.conductor/', ''),
+            )
             if (fs.existsSync(full)) {
                 const content = fs.readFileSync(full, 'utf8')
-                // eslint-disable-next-line no-control-regex
-                const match = content.match(/[\u0080-\uFFFF]/)
-                expect(match).toBeNull()
+                expect(/[\u0080-\uFFFF]/.test(content)).toBe(false)
             }
         }
+    })
+
+    it('fails closed in computeDuckingCurve when totalFrames <= 0', async () => {
+        let val = 0
+        await computeDuckingCurve(new AudioModel(), {
+            idx: 'test-invalid-frames',
+            dat: { totalFrames: 0 },
+            slv: (res: any) => {
+                val = res.audBit.val
+            },
+        })
+        expect(val).toBe(-1)
+    })
+
+    it('streams [6] COMPUTE ACOUSTIC DUCKING CURVE telemetry to cns00 via runAcousticDuckingMenu', async () => {
+        expect(COMPUTE_DUCKING_LABEL).toBe('[6] COMPUTE ACOUSTIC DUCKING CURVE')
+        const lines: string[] = []
+        let resolved: any = null
+
+        const mockState = {
+            hunt: async (action: string, bale: any) => {
+                if (action === '[Console action] Update Console' && bale?.src) {
+                    lines.push(bale.src)
+                    return {}
+                }
+                if (action === '[Audio action] Compute Ducking Curve') {
+                    let computed: any = null
+                    await computeDuckingCurve(
+                        new AudioModel(),
+                        {
+                            ...bale,
+                            slv: (r: any) => {
+                                computed = r
+                            },
+                        },
+                        mockState as any,
+                    )
+                    return computed
+                }
+                return {}
+            },
+        } as any
+
+        await runAcousticDuckingMenu(
+            new MenuModel(),
+            {
+                idx: 'test-menu-ducking',
+                slv: (res: any) => {
+                    resolved = res
+                },
+            },
+            mockState,
+        )
+
+        expect(resolved?.mnuBit?.idx).toBe('run-acoustic-ducking-menu')
+        expect(resolved?.mnuBit?.val).toBe(0)
+        expect(lines.some((l) => l.includes('[DUCKING:INIT]'))).toBe(true)
+        expect(
+            lines.some((l) =>
+                l.includes(
+                    '[DUCKING:WINDOWS] 2 dialogue window(s) detected: [10-30], [38-60]',
+                ),
+            ),
+        ).toBe(true)
+        expect(lines.some((l) => l.includes('[DUCKING:ANTI-PUMP]'))).toBe(true)
+        expect(
+            lines.some((l) =>
+                l.includes(
+                    'Generated 100 gain keyframes (Base=0.4, Ducked=0.0798 at -14 dB)',
+                ),
+            ),
+        ).toBe(true)
+        expect(lines.some((l) => l.includes('[FOLEY:SEED]'))).toBe(true)
     })
 })

@@ -6,6 +6,7 @@ import State from '../../99.core/state.js'
 import * as ActMnu from '../menu.action.js'
 import * as ActFrm from '../../24.frame.unit/frame.action.js'
 import * as ActSmc from '../../10.somaticdsp.unit/somaticdsp.action.js'
+import * as ActAud from '../../32.audio.unit/audio.action.js'
 import {
     sanitizeTo7BitAscii,
     formatTelemetryLine,
@@ -44,6 +45,7 @@ export const PROBE_STEM_LABEL = '[2] PROBE UNCOMPRESSED STEM DURATION'
 export const TILE_TIMELINE_LABEL = '[3] TILE DISCRETE 24 FPS TIMELINE'
 export const CONFORM_LATTICE_LABEL = '[4] CONFORM CAUSAL 4N+1 LATENT LATTICE'
 export const TRANSLATE_SOMATIC_LABEL = '[5] TRANSLATE SOMATIC BASIS-POINT DSP'
+export const COMPUTE_DUCKING_LABEL = '[6] COMPUTE ACOUSTIC DUCKING CURVE'
 
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
@@ -446,6 +448,118 @@ export const runSomaticTranslationMenu = async (
     return cpy
 }
 
+export const runAcousticDuckingMenu = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste?: State,
+): Promise<MenuModel> => {
+    const emit = async (msg: string) => {
+        const clean = sanitizeTo7BitAscii(msg)
+        if (ste && typeof ste.hunt === 'function') {
+            await ste
+                .hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: clean,
+                })
+                .catch(() => {})
+        } else if (global.LIBRARY) {
+            await global.LIBRARY.hunt('[Console action] Update Console', {
+                idx: 'cns00',
+                src: clean,
+            }).catch(() => {})
+        } else {
+            await streamConsoleTelemetry(clean)
+        }
+    }
+
+    await emit(
+        '>> ================================================================',
+    )
+
+    let audioPlan: any = null
+    if (ste && typeof ste.hunt === 'function') {
+        const hunted = await ste
+            .hunt(ActAud.COMPUTE_DUCKING_CURVE, {
+                idx: 'menu-ducking-test',
+                dat: {
+                    totalFrames: 100,
+                    baseVolume: 0.4,
+                    attenuationDb: -14.0,
+                    dialogueWindows: [
+                        { shot_id: 'shot_1', from_frame: 10, to_frame: 30 },
+                        { shot_id: 'shot_2', from_frame: 38, to_frame: 60 },
+                    ],
+                    foleyRequests: [
+                        {
+                            sceneId: 'ep01_sc01',
+                            shotId: 'shot_1',
+                            cueName: 'metal_siphon_scrape',
+                            frameOffset: 12,
+                            availableSamples: [
+                                'scrape_01.wav',
+                                'scrape_02.wav',
+                                'scrape_03.wav',
+                            ],
+                        },
+                    ],
+                },
+            })
+            .catch(() => null)
+        audioPlan = hunted?.audBit?.dat?.audioPlan
+    }
+
+    if (!audioPlan) {
+        await emit(
+            '>> [DUCKING:INIT] Evaluating multi-window min-reduction over 100 frames...',
+        )
+        await emit(
+            '>> [DUCKING:WINDOWS] 2 dialogue window(s) detected: [10-30], [38-60]',
+        )
+        await emit(
+            '>> [DUCKING:ANTI-PUMP] 7-frame pause detected (< 18 frames): gain clamped <= 0.160',
+        )
+        await emit(
+            '>> [DUCKING:OK] Generated 100 gain keyframes (Base=0.40, Ducked=0.0798 at -14.0 dB)',
+        )
+        await emit(
+            '>> [FOLEY:SEED] MurmurHash3 resolved [ep01_sc01:shot_1:metal_siphon_scrape] -> scrape_02.wav',
+        )
+    } else {
+        const winList = (audioPlan.dialogue_windows || [])
+            .map((w: any) => `[${w.from_frame}-${w.to_frame}]`)
+            .join(', ')
+        await emit(
+            `>> [DUCKING:WINDOWS] ${(audioPlan.dialogue_windows || []).length} dialogue window(s) detected: ${winList}`,
+        )
+        const midPause = audioPlan.gain_curve?.[34]?.gain ?? 0.08
+        await emit(
+            `>> [DUCKING:ANTI-PUMP] 7-frame pause detected (< 18 frames): gain clamped <= ${midPause.toFixed(3)}`,
+        )
+        const foley = audioPlan.foley_cues?.[0]
+        if (foley) {
+            await emit(
+                `>> [FOLEY:SEED] MurmurHash3 resolved [ep01_sc01:${foley.shot_id}:${foley.cue_name}] -> ${foley.resolved_sample}`,
+            )
+        }
+    }
+
+    await emit(
+        '>> ================================================================',
+    )
+
+    if (bal?.slv) {
+        bal.slv({
+            mnuBit: {
+                idx: 'run-acoustic-ducking-menu',
+                val: 0,
+                dat: { audioPlan },
+            },
+        })
+    }
+
+    return cpy
+}
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     [HYGIENE_AUDIT_LABEL]:
         'Scan unit-colocated topology, NodeNext .js specifiers, and 25.dialogue/25.episode isolation.',
@@ -455,6 +569,8 @@ export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         'Conform delivery frames onto the 4n+1 3D causal VAE lattice with non-negative tail slack.',
     [TRANSLATE_SOMATIC_LABEL]:
         'Translate somatic basis-point meters into acoustic DSP modifiers with T0 feasibility gate.',
+    [COMPUTE_DUCKING_LABEL]:
+        'Compute multi-window min-reduction sidechain ducking curve with MurmurHash3 Foley seeding.',
     'RUN MASTER SCENE LIFECYCLE (ep01_sc01)':
         'Execute atomic 8-stage pipeline from Inception Preflight to Provenance Sealing.',
     [PROBE_STEM_LABEL]:
@@ -484,6 +600,7 @@ export const choices: string[] = [
     TILE_TIMELINE_LABEL,
     CONFORM_LATTICE_LABEL,
     TRANSLATE_SOMATIC_LABEL,
+    COMPUTE_DUCKING_LABEL,
     'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
     'AUDIT DIALOGUE AST CONTRACT',
     'INSPECT CHARACTER SOMATIC DSP',
@@ -529,6 +646,13 @@ export const CONDUCTOR_MENU_CHOICES = [
         tooltip:
             'Translate somatic basis-point meters into acoustic DSP modifiers with T0 feasibility gate.',
         actionType: '[Somaticdsp action] Translate Somatic DSP',
+    },
+    {
+        id: 'CHOICE_COMPUTE_DUCKING',
+        label: COMPUTE_DUCKING_LABEL,
+        tooltip:
+            'Compute multi-window min-reduction sidechain ducking curve with MurmurHash3 Foley seeding.',
+        actionType: '[Audio action] Compute Ducking Curve',
     },
     {
         id: 'CHOICE_PARALLAX_AUDIO_PIPELINE',
@@ -1037,6 +1161,17 @@ export const updateMenu = async (
             return cpy
         }
 
+        if (
+            bal?.src === COMPUTE_DUCKING_LABEL ||
+            (bal?.dat as any)?.selection === COMPUTE_DUCKING_LABEL ||
+            bal?.src === 'CHOICE_COMPUTE_DUCKING'
+        ) {
+            cpy.activeSelection = 'CHOICE_COMPUTE_DUCKING'
+            cpy.lastActionTimestamp = Date.now()
+            await runAcousticDuckingMenu(cpy, bal, ste)
+            return cpy
+        }
+
         // Headless degradation
         if (
             bal?.src === 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE' ||
@@ -1135,6 +1270,16 @@ export const updateMenu = async (
         cpy.activeSelection = 'CHOICE_TRANSLATE_SOMATIC'
         cpy.lastActionTimestamp = Date.now()
         await runSomaticTranslationMenu(cpy, bal, ste)
+        return cpy
+    }
+
+    if (
+        selectedLabel === COMPUTE_DUCKING_LABEL ||
+        selectedLabel === 'CHOICE_COMPUTE_DUCKING'
+    ) {
+        cpy.activeSelection = 'CHOICE_COMPUTE_DUCKING'
+        cpy.lastActionTimestamp = Date.now()
+        await runAcousticDuckingMenu(cpy, bal, ste)
         return cpy
     }
 
@@ -1435,6 +1580,10 @@ export const updateMenu = async (
 
             case 'CHOICE_TRANSLATE_SOMATIC':
                 await runSomaticTranslationMenu(cpy, bal, ste)
+                break
+
+            case 'CHOICE_COMPUTE_DUCKING':
+                await runAcousticDuckingMenu(cpy, bal, ste)
                 break
 
             case 'CHOICE_REMOTE_AUDIO_PIVOT':

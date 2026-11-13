@@ -3,7 +3,7 @@ import clone from 'clone-deep'
 import * as Act from './audio.action.js'
 import { AudioModel } from './audio.model.js'
 import * as Buzz from './audio.buzzer.js'
-import State from '../99.core/state.js'
+import type State from '../99.core/state.js'
 
 export function reducer(
     model: AudioModel = new AudioModel(),
@@ -12,17 +12,20 @@ export function reducer(
 ) {
     switch (act.type) {
         case Act.INIT_AUDIO:
-            return Buzz.initAudio(clone(model), act.bale, state!)
+            return Buzz.initAudio(clone(model, true), act.bale, state)
 
         case Act.UPDATE_AUDIO:
-            return Buzz.updateAudio(clone(model), act.bale, state!)
+            return Buzz.updateAudio(clone(model, true), act.bale, state)
 
         case Act.ASSEMBLE_ACOUSTIC_EXPOSURE_SHEET:
-            return Buzz.assembleAcousticExposureSheet(
-                clone(model),
+            return (Buzz as any).assembleAcousticExposureSheet(
+                clone(model, true),
                 act.bale,
-                state!,
+                state,
             )
+
+        case Act.COMPUTE_DUCKING_CURVE:
+            return Buzz.computeDuckingCurve(clone(model, true), act.bale, state)
 
         default:
             return model

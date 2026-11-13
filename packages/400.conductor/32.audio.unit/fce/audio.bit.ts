@@ -1,9 +1,11 @@
 // packages/400.conductor/32.audio.unit/fce/audio.bit.ts
-import {
+import type {
+    DialogueWindow,
+    SilenceWindow,
+    MultiTrackAudioPlan,
+    FoleyCueItem,
     ExposureSheetDocument,
     ExposureSheetReceipt,
-    DialogueWindow,
-    FoleyCueItem,
 } from './audio.interface.js'
 
 export default interface AudioBit {
@@ -15,9 +17,23 @@ export default interface AudioBit {
         series_id?: string
         ambient_loop_path?: string
         dialogue_windows?: DialogueWindow[]
+        dialogueWindows?: DialogueWindow[]
+        silenceWindows?: SilenceWindow[]
         foley_cues?: FoleyCueItem[]
         exposureSheet?: ExposureSheetDocument
         receipt?: ExposureSheetReceipt
+        totalFrames?: number
+        baseVolume?: number
+        attenuationDb?: number
+        foleyRequests?: {
+            sceneId: string
+            shotId: string
+            cueName: string
+            frameOffset: number
+            availableSamples: string[]
+        }[]
+        foleyCues?: FoleyCueItem[]
+        audioPlan?: MultiTrackAudioPlan
     }
-    slv?: Function
+    slv?: (result: { audBit: Partial<AudioBit> }) => void
 }

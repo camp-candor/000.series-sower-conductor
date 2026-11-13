@@ -169,6 +169,7 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
                 '[3] TILE DISCRETE 24 FPS TIMELINE',
                 '[4] CONFORM CAUSAL 4N+1 LATENT LATTICE',
                 '[5] TRANSLATE SOMATIC BASIS-POINT DSP',
+                '[6] COMPUTE ACOUSTIC DUCKING CURVE',
                 'RUN PARALLAX DINNER AUDIO-FIRST PIPELINE',
                 'RUN MASTER SCENE LIFECYCLE (ep01_sc01)',
                 'AUDIT DIALOGUE AST CONTRACT',

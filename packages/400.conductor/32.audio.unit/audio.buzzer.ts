@@ -2,21 +2,17 @@
 export {
     initAudio,
     updateAudio,
-    assembleAcousticExposureSheet,
-    assembleExposureSheetDocument,
-} from './buz/audio.buzz.js'
-export {
+    computeDuckingCurve,
     calculateDuckedVolume,
     computeSingleWindowGain,
     computeMultiWindowDuckingCurve,
-    ATTACK_FRAMES,
-    RELEASE_FRAMES,
-    ATTENUATION_DB,
-} from './buz/duckingCalculator.buzz.js'
-export {
     murmurHash3,
     resolveDeterministicFoleyCue,
-} from './buz/foleySeeder.buzz.js'
+} from './buz/acousticDucking.buzz.js'
+export {
+    assembleAcousticExposureSheet,
+    assembleExposureSheetDocument,
+} from './buz/audio.buzz.js'
 export {
     PARALLAX_FOLEY_REGISTRY,
     mulberry32,
