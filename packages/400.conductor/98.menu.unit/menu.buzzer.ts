@@ -4,6 +4,7 @@ export {
     dispatchRemoteAudioPivot,
     updateConductorStatusHud,
     runParallaxDinnerAudioFirstPipeline,
+    selectDraftScenePairFromCockpit,
     choices,
     TOOLTIP_DESCRIPTIONS,
     CONDUCTOR_GRID_LEFT,

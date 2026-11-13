@@ -73,11 +73,25 @@ export interface FoleyPlacement {
     volume?: number
 }
 
+export interface CompileExposureSheetOptions {
+    seriesId?: string
+    turnCount?: number
+    fountainText?: string
+    actionLines?: Array<{ text: string; frameOffset: number }>
+    foleyRegistry?: Record<string, string[]>
+    baseDir?: string
+}
+
 export const matchActionLinesToFoleyPlacements = (
     sceneId: string,
     actionLines: Array<{ text: string; frameOffset: number }>,
+    foleyRegistry: Record<string, string[]> = PARALLAX_FOLEY_REGISTRY,
 ): FoleyPlacement[] => {
     const placements: FoleyPlacement[] = []
+    const activeRegistry =
+        foleyRegistry && Object.keys(foleyRegistry).length > 0
+            ? foleyRegistry
+            : PARALLAX_FOLEY_REGISTRY
 
     // Simple keyword mapping for the test case
     const keywords: Record<string, string> = {
@@ -97,26 +111,26 @@ export const matchActionLinesToFoleyPlacements = (
         const text = line.text.toLowerCase()
         let matchedCue: string | null = null
 
-        for (const [kw, cue] of Object.entries(keywords)) {
-            if (text.includes(kw)) {
+        // First check custom registry keys directly if present
+        for (const cue of Object.keys(activeRegistry)) {
+            const cueSpace = cue.toLowerCase().replace(/_/g, ' ')
+            if (text.includes(cue.toLowerCase()) || text.includes(cueSpace)) {
                 matchedCue = cue
                 break
             }
         }
 
-        // If not matched by exact keyword, just look for the cue name in the text
         if (!matchedCue) {
-            for (const cue of Object.keys(PARALLAX_FOLEY_REGISTRY)) {
-                const cueSpace = cue.replace('_', ' ')
-                if (text.includes(cue) || text.includes(cueSpace)) {
+            for (const [kw, cue] of Object.entries(keywords)) {
+                if (text.includes(kw) && activeRegistry[cue]) {
                     matchedCue = cue
                     break
                 }
             }
         }
 
-        if (matchedCue) {
-            const variants = PARALLAX_FOLEY_REGISTRY[matchedCue]
+        if (matchedCue && activeRegistry[matchedCue]) {
+            const variants = activeRegistry[matchedCue]
             let seed = murmurHash3(
                 `${sceneId}:${matchedCue}:${line.frameOffset}`,
             )
@@ -177,11 +191,44 @@ export const mergeCloseSpeechWindows = (
     return merged
 }
 
-export const compileParallaxExposureSheet = (sceneId = 'ep01_sc01') => {
-    // We will generate the 34 dialogue turns and 9 Foley placements for the Parallax Dinner
+export const DEFAULT_PARALLAX_FOLEY_ACTION_LINES = [
+    {
+        text: 'South Georgia rain squall beats against the window.',
+        frameOffset: 0,
+    },
+    { text: 'Peterbilt 379 diesel idling outside.', frameOffset: 150 },
+    {
+        text: 'The hydraulic diner door hiss sounds as he enters.',
+        frameOffset: 300,
+    },
+    {
+        text: 'He slides into the booth, a sharp booth creak.',
+        frameOffset: 450,
+    },
+    {
+        text: 'Waitress drops the laminated menu (menu drop).',
+        frameOffset: 600,
+    },
+    { text: 'She does a coffee pour.', frameOffset: 750 },
+    { text: 'He rips open an isopropyl wipe tear.', frameOffset: 900 },
+    { text: 'A metallic trial lens click echoes.', frameOffset: 1050 },
+    {
+        text: 'A roaring logging semi pass shakes the diner.',
+        frameOffset: 1200,
+    },
+]
 
-    // Generate 34 dialogue windows, properly merged to account for the ducking
-    const rawWindows = Array.from({ length: 34 }).map((_, i) => ({
+export const compileParallaxExposureSheet = (
+    sceneId = 'ep01_sc01',
+    options: CompileExposureSheetOptions = {},
+) => {
+    const turnCount =
+        typeof options.turnCount === 'number' && options.turnCount > 0
+            ? options.turnCount
+            : 34
+
+    // Generate dialogue windows dynamically for any valid turnCount
+    const rawWindows = Array.from({ length: turnCount }).map((_, i) => ({
         startFrame: i * 50 + 10,
         endFrame: i * 50 + 40,
         id: `dlg_${i + 1}`,
@@ -197,41 +244,19 @@ export const compileParallaxExposureSheet = (sceneId = 'ep01_sc01') => {
         stem_path: `audio/dialogue/${sceneId}_stem.wav`,
     }))
 
-    // Generate 9 Foley placements based on the keywords
-    const foleyActionLines = [
-        {
-            text: 'South Georgia rain squall beats against the window.',
-            frameOffset: 0,
-        },
-        { text: 'Peterbilt 379 diesel idling outside.', frameOffset: 150 },
-        {
-            text: 'The hydraulic diner door hiss sounds as he enters.',
-            frameOffset: 300,
-        },
-        {
-            text: 'He slides into the booth, a sharp booth creak.',
-            frameOffset: 450,
-        },
-        {
-            text: 'Waitress drops the laminated menu (menu drop).',
-            frameOffset: 600,
-        },
-        { text: 'She does a coffee pour.', frameOffset: 750 },
-        { text: 'He rips open an isopropyl wipe tear.', frameOffset: 900 },
-        { text: 'A metallic trial lens click echoes.', frameOffset: 1050 },
-        {
-            text: 'A roaring logging semi pass shakes the diner.',
-            frameOffset: 1200,
-        },
-    ]
+    const foleyActionLines =
+        options.actionLines && options.actionLines.length > 0
+            ? options.actionLines
+            : DEFAULT_PARALLAX_FOLEY_ACTION_LINES
 
     const foleyPlacements = matchActionLinesToFoleyPlacements(
         sceneId,
         foleyActionLines,
+        options.foleyRegistry ?? PARALLAX_FOLEY_REGISTRY,
     )
 
     const doc = assembleExposureSheetDocument(
-        'under-the-floorboards',
+        options.seriesId || 'under-the-floorboards',
         sceneId,
         dialogueWindows,
         foleyPlacements,
@@ -248,13 +273,17 @@ export const compileParallaxExposureSheet = (sceneId = 'ep01_sc01') => {
         speechWindows: rawWindows,
     }
 
+    const rootDir = options.baseDir
+        ? path.resolve(options.baseDir)
+        : process.cwd()
+
     // Output paths
-    const epOutDir = path.resolve('outputs/ep01_sc01')
+    const epOutDir = path.resolve(rootDir, `outputs/${sceneId}`)
     if (!fs.existsSync(epOutDir)) {
         fs.mkdirSync(epOutDir, { recursive: true })
     }
 
-    const draftsDir = path.resolve('drafts')
+    const draftsDir = path.resolve(rootDir, 'drafts')
     if (!fs.existsSync(draftsDir)) {
         fs.mkdirSync(draftsDir, { recursive: true })
     }

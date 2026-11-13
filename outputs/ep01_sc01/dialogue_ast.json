@@ -2,9 +2,9 @@
     "scene_id": "ep01_sc01",
     "episode_number": 1,
     "sequence_index": 0,
-    "state_snapshot_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+    "state_snapshot_hash": "81d31614fa5a17080971e5573a31a75911711ab4c5446e5575a64eacf8c30c3b",
     "pinned_fact_version": 1,
-    "environment_id": "env_diner",
+    "environment_id": "loc_dixie_starlight_diner",
     "camera_framing": {
         "shot_type": "MEDIUM_SHOT",
         "focal_entity_id": "char_johnny_walkman",

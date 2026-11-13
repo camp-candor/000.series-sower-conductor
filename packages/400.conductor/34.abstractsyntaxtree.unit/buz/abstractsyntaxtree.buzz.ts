@@ -45,7 +45,8 @@ export const parseSceneAST = (
     if (bal.dat?.rawPayload) {
         rawJson = bal.dat.rawPayload
     } else {
-        const targetFile = bal.src || 'drafts/dialogue_ast.json'
+        const targetFile =
+            bal.src || bal.dat?.filePath || 'drafts/dialogue_ast.json'
         const filePath = path.resolve(process.cwd(), targetFile)
 
         if (!fs.existsSync(filePath)) {

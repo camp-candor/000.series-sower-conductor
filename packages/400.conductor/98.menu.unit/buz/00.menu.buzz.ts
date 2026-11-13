@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { MenuModel } from '../menu.model.js'
 import MenuBit from '../fce/menu.bit.js'
 import State from '../../99.core/state.js'
@@ -9,15 +11,31 @@ import {
 } from './telemetryStreamer.buzz.js'
 import {
     compileParallaxSceneAst,
+    discoverDraftScenePairs,
+    loadActiveBibleManifest,
+    matchFountainActionLinesAgainstFoleyRegistry,
     PARALLAX_DINNER_FOUNTAIN_SOURCE,
+    DraftScenePair,
 } from '../../34.abstractsyntaxtree.unit/buz/parallaxAstCompiler.buzz.js'
-import { compileParallaxExposureSheet } from '../../32.audio.unit/buz/foleyMatcher.buzz.js'
+import { extractFountainActionLines } from '../../34.abstractsyntaxtree.unit/buz/fountainTokenizer.buzz.js'
+import {
+    SceneAST,
+    SceneASTSchema,
+} from '../../34.abstractsyntaxtree.unit/fce/abstractsyntaxtree.interface.js'
+import {
+    compileParallaxExposureSheet,
+    DEFAULT_PARALLAX_FOLEY_ACTION_LINES,
+} from '../../32.audio.unit/buz/foleyMatcher.buzz.js'
 import { stampStaticComposition } from '../../35.remotion.unit/buz/stampComposition.buzz.js'
 import { generateUniversalProvenanceLockfile } from '../../35.remotion.unit/buz/provenance.buzz.js'
 import {
     SceneShotPlan,
     CompositionMetadata,
 } from '../../35.remotion.unit/fce/remotion.interface.js'
+import {
+    MasterSceneLifecycleContext,
+    ShotLifecycleItem,
+} from '../../37.lifecycle.unit/fce/masterLifecycle.interface.js'
 
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
@@ -235,30 +253,148 @@ export const dispatchRemoteAudioPivot = async (
     return cpy
 }
 
+export const selectDraftScenePairFromCockpit = async (
+    baseDir?: string,
+    preselectedChoice?: string,
+): Promise<DraftScenePair> => {
+    const pairs = discoverDraftScenePairs(baseDir)
+    const fallbackPair: DraftScenePair = pairs[0] || {
+        id: 'default/parallax_dinner',
+        label: 'drafts/dialogue_ast.json (Default Parallax Scene)',
+        seriesSlug: 'wiregrass-basin',
+        astPath: './drafts/dialogue_ast.json',
+    }
+
+    if (preselectedChoice) {
+        const directMatch = pairs.find(
+            (p) =>
+                p.id === preselectedChoice ||
+                p.label === preselectedChoice ||
+                p.seriesSlug === preselectedChoice ||
+                p.fountainPath === preselectedChoice ||
+                p.astPath === preselectedChoice,
+        )
+        if (directMatch) return directMatch
+    }
+
+    if (!global.LIBRARY) {
+        return fallbackPair
+    }
+
+    const lst = pairs.map((p) => p.label)
+    const gridBit = await global.LIBRARY.hunt('[Grid action] Update Grid', {
+        x: CONDUCTOR_GRID_LEFT.x,
+        y: CONDUCTOR_GRID_LEFT.y,
+        xSpan: CONDUCTOR_GRID_LEFT.xSpan,
+        ySpan: CONDUCTOR_GRID_LEFT.ySpan,
+    })
+
+    const choiceBit = await global.LIBRARY.hunt('[Open action] Open Choice', {
+        dat: {
+            clr0: 0,
+            clr1: 3,
+            cb: async (focusedLabel: string) => {
+                const hovered = pairs.find((p) => p.label === focusedLabel)
+                if (hovered) {
+                    await streamConsoleTelemetry(
+                        `>> [DRAFT:SELECT] Series: ${hovered.seriesSlug} | Pair: ${hovered.label}`,
+                    )
+                }
+            },
+        },
+        src: 'VERTICAL',
+        lst,
+        net: gridBit?.grdBit?.dat,
+    })
+
+    const selectedLabel = choiceBit?.chcBit?.src
+    const matched = pairs.find(
+        (p) => p.label === selectedLabel || p.id === selectedLabel,
+    )
+    return matched || fallbackPair
+}
+
 export const runParallaxDinnerAudioFirstPipeline = async (
     cpy: MenuModel,
     bal: MenuBit,
     _ste: State,
 ): Promise<MenuModel> => {
     try {
-        // 1. AST Parity Compilation
-        const ast = compileParallaxSceneAst(PARALLAX_DINNER_FOUNTAIN_SOURCE)
-        if (!ast.lines || ast.lines.length !== 34) {
-            throw new Error(
-                `Expected 34 dialogue turns, got ${ast.lines?.length}`,
+        const dat = (bal?.dat ?? {}) as Record<string, any>
+        const baseDir = dat.baseDir
+            ? path.resolve(String(dat.baseDir))
+            : process.cwd()
+        const seriesSlug = dat.seriesSlug ? String(dat.seriesSlug) : undefined
+
+        let fountainSource = PARALLAX_DINNER_FOUNTAIN_SOURCE
+        if (
+            typeof dat.fountainText === 'string' &&
+            dat.fountainText.trim().length > 0
+        ) {
+            fountainSource = dat.fountainText
+        } else if (
+            typeof dat.fountainPath === 'string' &&
+            fs.existsSync(path.resolve(baseDir, dat.fountainPath))
+        ) {
+            fountainSource = fs.readFileSync(
+                path.resolve(baseDir, dat.fountainPath),
+                'utf8',
             )
         }
+
+        const manifest = loadActiveBibleManifest({
+            seriesSlug,
+            bibleStatePath: dat.bibleStatePath,
+            baseDir,
+        })
+
+        // 1. AST Parity Compilation (accepts any valid turn count >= 1 and resolves speaker cues dynamically against bible-state.json)
+        const ast = compileParallaxSceneAst(fountainSource, {
+            sceneId: dat.sceneId || 'ep01_sc01',
+            seriesSlug: manifest.seriesSlug,
+            bibleManifest: manifest,
+            baseDir,
+        })
+        if (!ast.lines || ast.lines.length < 1) {
+            throw new Error(
+                `Expected at least 1 dialogue turn, got ${ast.lines?.length ?? 0}`,
+            )
+        }
+        const turnCount = ast.lines.length
         await streamConsoleTelemetry(
-            '>> [PARALLAX:AST] [OK] 34 dialogue turns verified with T0 = $0.00 verbatim parity.',
+            `>> [PARALLAX:AST] [OK] ${turnCount} dialogue turns verified with T0 = $0.00 verbatim parity.`,
         )
 
-        // 2. Exposure Sheet Compilation (Clock + Foley)
-        const exposureDoc = compileParallaxExposureSheet('ep01_sc01')
+        // 2. Exposure Sheet Compilation (Clock + Foley matched against series Foley registry)
+        const extractedActions = extractFountainActionLines(fountainSource).map(
+            (text, idx) => ({
+                text,
+                frameOffset: idx * 150,
+            }),
+        )
+        const matchedFromScript = matchFountainActionLinesAgainstFoleyRegistry(
+            fountainSource,
+            ast.scene_id,
+            manifest.foleyRegistry,
+        )
+        const actionLinesForExposure =
+            matchedFromScript.length > 0
+                ? extractedActions
+                : DEFAULT_PARALLAX_FOLEY_ACTION_LINES
+
+        const exposureDoc = compileParallaxExposureSheet(ast.scene_id, {
+            seriesId: manifest.seriesSlug,
+            turnCount,
+            actionLines: actionLinesForExposure,
+            foleyRegistry: manifest.foleyRegistry,
+            baseDir,
+        })
+        const foleyCount = exposureDoc.foleyPlacements?.length ?? 0
         await streamConsoleTelemetry(
             '>> [PARALLAX:CLOCK] [OK] Acoustic master clock quantized at 24.0 fps with zero drift.',
         )
         await streamConsoleTelemetry(
-            '>> [PARALLAX:FOLEY] [OK] 9 Foley cues matched with Mulberry32 + :retry1 anti-clustering (-14.0 dB ducking).',
+            `>> [PARALLAX:FOLEY] [OK] ${foleyCount} Foley cues matched with Mulberry32 + :retry1 anti-clustering (-14.0 dB ducking).`,
         )
 
         // 3. Audio-Only TSX Stamping
@@ -273,9 +409,9 @@ export const runParallaxDinnerAudioFirstPipeline = async (
                 durationFrames: win.endFrame - win.startFrame,
                 speakerId: l.speaker_id || 'char_unknown',
                 dialogueText: l.dialogue_clean_ascii || '',
-                audioWavPath: `outputs/ep01_sc01/stems/line_${String(i + 1).padStart(3, '0')}.wav`,
-                videoPlatePath: `plates/ep01_sc01_shot_${String(i + 1).padStart(3, '0')}.mp4`,
-                bgMattePath: `mattes/ep01_sc01_matte_${String(i + 1).padStart(3, '0')}.png`,
+                audioWavPath: `outputs/${ast.scene_id}/stems/line_${String(i + 1).padStart(3, '0')}.wav`,
+                videoPlatePath: `plates/${ast.scene_id}_shot_${String(i + 1).padStart(3, '0')}.mp4`,
+                bgMattePath: `mattes/${ast.scene_id}_matte_${String(i + 1).padStart(3, '0')}.png`,
             }
         })
 
@@ -289,19 +425,19 @@ export const runParallaxDinnerAudioFirstPipeline = async (
             }),
         )
 
-        const receipt = await stampStaticComposition('ep01_sc01', shots, {
+        const receipt = await stampStaticComposition(ast.scene_id, shots, {
             audioOnly: true,
             ambientLoopPath: 'music/ambient/amb_diner_rain_hum.wav',
             foleyClips,
         })
         await streamConsoleTelemetry(
-            `>> [PARALLAX:BAKE] [OK] Master_ep01_sc01.tsx stamped (audioOnly: true, ${receipt.totalFrames} frames, 34 dialogue, 9 Foley).`,
+            `>> [PARALLAX:BAKE] [OK] Master_${ast.scene_id}.tsx stamped (audioOnly: true, ${receipt.totalFrames} frames, ${turnCount} dialogue, ${foleyCount} Foley).`,
         )
 
         // 4. WORM Lockfile Sealing
         const compositionMetadata: CompositionMetadata = {
             episodeId: 'ep01',
-            sceneId: 'ep01_sc01',
+            sceneId: ast.scene_id,
             fps: 24,
             width: 1920,
             height: 1080,
@@ -324,7 +460,7 @@ export const runParallaxDinnerAudioFirstPipeline = async (
 
         const lockfile = generateUniversalProvenanceLockfile({
             episodeId: 'ep01',
-            sceneId: 'ep01_sc01',
+            sceneId: ast.scene_id,
             metadata: compositionMetadata,
         })
         await streamConsoleTelemetry(
@@ -336,7 +472,12 @@ export const runParallaxDinnerAudioFirstPipeline = async (
                 mnuBit: {
                     idx: 'run-parallax-dinner-audio-first-pipeline-success',
                     val: 1,
-                    dat: { receipt, lockfilePath: lockfile.lockfilePath },
+                    dat: {
+                        ast,
+                        exposureDoc,
+                        receipt,
+                        lockfilePath: lockfile.lockfilePath,
+                    },
                 },
             })
         }
@@ -463,11 +604,111 @@ export const updateMenu = async (
         switch (matchedChoice.id) {
             case 'CHOICE_MASTER_LIFECYCLE':
                 {
+                    const baseDir = (bal?.dat as any)?.baseDir
+                        ? path.resolve(String((bal?.dat as any).baseDir))
+                        : process.cwd()
+                    const selectedPair = await selectDraftScenePairFromCockpit(
+                        baseDir,
+                        (bal?.dat as any)?.pairChoice,
+                    )
+                    const manifest = loadActiveBibleManifest({
+                        seriesSlug: selectedPair.seriesSlug,
+                        bibleStatePath: selectedPair.bibleStatePath,
+                        baseDir,
+                    })
+
+                    let compiledAst: SceneAST | null = null
+                    let fountainSource: string | undefined
+
+                    if (
+                        selectedPair.fountainPath &&
+                        fs.existsSync(selectedPair.fountainPath)
+                    ) {
+                        fountainSource = fs.readFileSync(
+                            selectedPair.fountainPath,
+                            'utf8',
+                        )
+                        compiledAst = compileParallaxSceneAst(fountainSource, {
+                            sceneId: 'ep01_sc01',
+                            seriesSlug: manifest.seriesSlug,
+                            bibleManifest: manifest,
+                            baseDir,
+                        })
+                    } else if (
+                        selectedPair.astPath &&
+                        fs.existsSync(selectedPair.astPath)
+                    ) {
+                        try {
+                            const rawAst = JSON.parse(
+                                fs.readFileSync(selectedPair.astPath, 'utf8'),
+                            )
+                            const parsed = SceneASTSchema.safeParse(rawAst)
+                            if (parsed.success) {
+                                compiledAst = parsed.data
+                            }
+                        } catch {
+                            // Fall back to default lifecycle context
+                        }
+                    }
+
+                    const foleyMatches = fountainSource
+                        ? matchFountainActionLinesAgainstFoleyRegistry(
+                              fountainSource,
+                              compiledAst?.scene_id || 'ep01_sc01',
+                              manifest.foleyRegistry,
+                          )
+                        : []
+
+                    if (foleyMatches.length > 0) {
+                        await streamConsoleTelemetry(
+                            `>> [MENU:FOLEY] Matched ${foleyMatches.length} Foley cues from [${selectedPair.label}] against [${manifest.seriesSlug}] registry.`,
+                        )
+                    }
+
+                    let lifecyclePayload: Record<string, any> = {
+                        src: compiledAst?.scene_id || 'ep01_sc01',
+                    }
+
+                    if (compiledAst && compiledAst.lines.length > 0) {
+                        const shots: ShotLifecycleItem[] =
+                            compiledAst.lines.map((line, idx) => ({
+                                shotId: `sh${String(idx + 1).padStart(2, '0')}`,
+                                speakerId: line.speaker_id,
+                                dialogueText: line.dialogue_clean_ascii,
+                                durationMs: 2500,
+                            }))
+                        const lifecycleContext: MasterSceneLifecycleContext = {
+                            sceneId: compiledAst.scene_id || 'ep01_sc01',
+                            episodeId: 'ep01',
+                            currentStage: 'STAGE_0_IDLE',
+                            isDirty: false,
+                            shots,
+                            totalFrames: 0,
+                            activeLeaseId: null,
+                            activeEpoch: null,
+                            stampedTsxPath: null,
+                            outputDeliverablePath: null,
+                            lockfileSha256: null,
+                            vramUsedMb: 0,
+                            t0Spend: '$0.00',
+                            t4Spend: '$0.00',
+                            attemptCount: 0,
+                            maxAttempts: 3,
+                            telemetryLogs: [],
+                        }
+                        lifecyclePayload = {
+                            src: lifecycleContext.sceneId,
+                            dat: {
+                                sceneId: lifecycleContext.sceneId,
+                                episodeId: 'ep01',
+                                lifecycleContext,
+                            },
+                        }
+                    }
+
                     const bit = await ste.hunt(
                         '[Lifecycle action] Chain Master Scene Lifecycle',
-                        {
-                            src: 'ep01_sc01',
-                        },
+                        lifecyclePayload,
                     )
                     if (bit?.lfcBit?.val === 1) {
                         await global.LIBRARY.hunt(
@@ -481,9 +722,78 @@ export const updateMenu = async (
                 }
                 break
             case 'CHOICE_AST_AUDIT':
-                await ste.hunt('[Abstractsyntaxtree action] Parse Scene AST', {
-                    dat: { filePath: './drafts/dialogue_ast.json' },
-                })
+                {
+                    const baseDir = (bal?.dat as any)?.baseDir
+                        ? path.resolve(String((bal?.dat as any).baseDir))
+                        : process.cwd()
+                    const selectedPair = await selectDraftScenePairFromCockpit(
+                        baseDir,
+                        (bal?.dat as any)?.pairChoice,
+                    )
+                    const manifest = loadActiveBibleManifest({
+                        seriesSlug: selectedPair.seriesSlug,
+                        bibleStatePath: selectedPair.bibleStatePath,
+                        baseDir,
+                    })
+
+                    let targetAstFilePath = './drafts/dialogue_ast.json'
+                    if (
+                        selectedPair.fountainPath &&
+                        fs.existsSync(selectedPair.fountainPath)
+                    ) {
+                        const fountainRaw = fs.readFileSync(
+                            selectedPair.fountainPath,
+                            'utf8',
+                        )
+                        const targetDraftAst =
+                            selectedPair.astPath ||
+                            path.join(baseDir, 'drafts', 'dialogue_ast.json')
+                        compileParallaxSceneAst(fountainRaw, {
+                            sceneId: 'ep01_sc01',
+                            seriesSlug: manifest.seriesSlug,
+                            bibleManifest: manifest,
+                            outputDraftPath: targetDraftAst,
+                            baseDir,
+                        })
+                        const foleyMatches =
+                            matchFountainActionLinesAgainstFoleyRegistry(
+                                fountainRaw,
+                                'ep01_sc01',
+                                manifest.foleyRegistry,
+                            )
+                        await streamConsoleTelemetry(
+                            `>> [MENU:AST-AUDIT] Compiled & matched ${foleyMatches.length} Foley cues for [${selectedPair.label}] (${manifest.seriesSlug}).`,
+                        )
+                        if (selectedPair.astPath) {
+                            const rel = path
+                                .relative(process.cwd(), selectedPair.astPath)
+                                .replace(/\\/g, '/')
+                            targetAstFilePath =
+                                rel === 'drafts/dialogue_ast.json'
+                                    ? './drafts/dialogue_ast.json'
+                                    : rel.startsWith('.')
+                                      ? rel
+                                      : `./${rel}`
+                        }
+                    } else if (selectedPair.astPath) {
+                        const rel = path
+                            .relative(process.cwd(), selectedPair.astPath)
+                            .replace(/\\/g, '/')
+                        targetAstFilePath =
+                            rel === 'drafts/dialogue_ast.json'
+                                ? './drafts/dialogue_ast.json'
+                                : rel.startsWith('.')
+                                  ? rel
+                                  : `./${rel}`
+                    }
+
+                    await ste.hunt(
+                        '[Abstractsyntaxtree action] Parse Scene AST',
+                        {
+                            dat: { filePath: targetAstFilePath },
+                        },
+                    )
+                }
                 break
 
             case 'CHOICE_SOMATIC_DSP':

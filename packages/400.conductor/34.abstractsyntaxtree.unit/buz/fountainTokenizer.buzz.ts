@@ -63,6 +63,7 @@ export function parseFountainDialogue(
     let currentSpeaker: string | null = null
     let accumulatedDialogue: string[] = []
     let inTitlePage = true
+    let inBlockComment = false
 
     const flushTurn = () => {
         if (currentSpeaker && accumulatedDialogue.length > 0) {
@@ -82,6 +83,19 @@ export function parseFountainDialogue(
     for (let i = 0; i < lines.length; i++) {
         const rawLine = lines[i]
         const line = rawLine.trim()
+
+        if (inBlockComment) {
+            if (line.includes('*/')) {
+                inBlockComment = false
+            }
+            continue
+        }
+        if (line.startsWith('/*')) {
+            if (!line.includes('*/')) {
+                inBlockComment = true
+            }
+            continue
+        }
 
         // Handle title page logic
         if (inTitlePage) {
@@ -168,6 +182,7 @@ export function extractFountainActionLines(fountainText: string): string[] {
 
     let currentSpeaker: string | null = null
     let inTitlePage = true
+    let inBlockComment = false
     let actionBuffer: string[] = []
 
     const flushAction = () => {
@@ -183,6 +198,19 @@ export function extractFountainActionLines(fountainText: string): string[] {
     for (let i = 0; i < lines.length; i++) {
         const rawLine = lines[i]
         const line = rawLine.trim()
+
+        if (inBlockComment) {
+            if (line.includes('*/')) {
+                inBlockComment = false
+            }
+            continue
+        }
+        if (line.startsWith('/*')) {
+            if (!line.includes('*/')) {
+                inBlockComment = true
+            }
+            continue
+        }
 
         if (inTitlePage) {
             if (line === '===') {
@@ -234,8 +262,9 @@ export function extractFountainActionLines(fountainText: string): string[] {
         }
 
         if (!currentSpeaker) {
-            // It's an action line
+            // Each non-empty action line inside a paragraph is preserved so individual Foley cues can match
             actionBuffer.push(line)
+            flushAction()
         }
     }
 
