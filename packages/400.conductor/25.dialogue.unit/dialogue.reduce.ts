@@ -14,6 +14,8 @@ export function reducer(
             return Buzz.updateDialogue(clone(model), act.bale, state)
         case Act.INIT_DIALOGUE:
             return Buzz.initDialogue(clone(model), act.bale, state)
+        case Act.EXTRACT_PARENTHETICAL_CUES:
+            return Buzz.extractParentheticalCues(clone(model), act.bale, state)
         default:
             return model
     }

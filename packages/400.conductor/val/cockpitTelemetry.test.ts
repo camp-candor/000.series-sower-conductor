@@ -179,6 +179,7 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
                 'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
                 'DISPATCH REMOTE AUDIO PIVOT',
                 '[T] INSPECT EPISODE CHRONOLOGY TIMECODE',
+                'BATCH INGEST AUTO-SCRIPT STACK',
                 'ROOT MENU',
             ])
         })

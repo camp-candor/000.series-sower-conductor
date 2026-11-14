@@ -26,5 +26,16 @@ export class AuditConductorTimecode implements Action {
     constructor(public bale: MenuBit) {}
 }
 
+export const BATCH_INGEST_AUTO_SCRIPT_STACK =
+    '[Menu action] Batch Ingest Auto-Script Stack'
+export class BatchIngestAutoScriptStack implements Action {
+    readonly type = BATCH_INGEST_AUTO_SCRIPT_STACK
+    constructor(public bale: MenuBit) {}
+}
+
 export type Actions =
-    InitMenu | UpdateMenu | DispatchRemoteAudioPivot | AuditConductorTimecode
+    | InitMenu
+    | UpdateMenu
+    | DispatchRemoteAudioPivot
+    | AuditConductorTimecode
+    | BatchIngestAutoScriptStack

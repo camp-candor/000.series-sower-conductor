@@ -1,2 +1,5 @@
 export { initScene } from './buz/scene.buzz.js'
 export { updateScene } from './buz/scene.buzz.js'
+export { parseSceneTransitions } from './buz/scene.buzz.js'
+export { extractSceneTransitions } from './buz/scene.buzz.js'
+export { mapTransitionToPauseFrames } from './buz/scene.buzz.js'

@@ -241,6 +241,177 @@ export function parseFountainDialogue(
     return turns
 }
 
+export function isFountainTransitionLine(line: string): boolean {
+    if (!line) return false
+    const t = line.trim()
+    if (t.length === 0) return false
+    if (t.startsWith('>')) return true
+    if (/^[A-Z0-9\s]+ TO:$/.test(t)) return true
+    if (t === 'FADE OUT.' || t === 'FADE IN:') return true
+    if (/^TIME CUT:/i.test(t)) return true
+    return false
+}
+
+export function isFountainParenthetical(line: string): boolean {
+    if (!line) return false
+    const t = line.trim()
+    return /^\([^)]+\)$/.test(t)
+}
+
+export interface FountainCategoryDetail {
+    count: number
+    example: string | null
+}
+
+export interface FountainSixCategoryReport {
+    sluglines: FountainCategoryDetail
+    actionLines: FountainCategoryDetail
+    characterCues: FountainCategoryDetail
+    parentheticals: FountainCategoryDetail
+    dialogueLines: FountainCategoryDetail
+    transitions: FountainCategoryDetail
+    dateHeader: string | null
+    startTimeHm: string | null
+    chronology: FountainChronologyHeaders
+    allValid: boolean
+}
+
+export interface StackedScreenplayEntry {
+    sequence: number
+    tick: number
+    fileName: string
+}
+
+export function parseStackedScreenplayFileName(
+    fileName: string,
+): StackedScreenplayEntry {
+    const seqMatch = fileName.match(/(\d+)/)
+    const sequence = seqMatch ? parseInt(seqMatch[1]!, 10) : 999999
+    const tickMatch = fileName.match(/tick[_-]?(\d+)/i)
+    const tick = tickMatch ? parseInt(tickMatch[1]!, 10) : 0
+    return { sequence, tick, fileName }
+}
+
+export function sortStackedScreenplayFiles(names: string[]): string[] {
+    const filtered = names.filter((n) => n.endsWith('.fountain'))
+    const entries = filtered.map((n) => parseStackedScreenplayFileName(n))
+    entries.sort((a, b) => {
+        if (a.sequence !== b.sequence) return a.sequence - b.sequence
+        if (a.tick !== b.tick) return a.tick - b.tick
+        if (a.fileName < b.fileName) return -1
+        if (a.fileName > b.fileName) return 1
+        return 0
+    })
+    return entries.map((e) => e.fileName)
+}
+
+export function discoverAutoScriptStack(
+    dirEntries: string[],
+): StackedScreenplayEntry[] {
+    return sortStackedScreenplayFiles(dirEntries).map((fileName) =>
+        parseStackedScreenplayFileName(fileName),
+    )
+}
+
+export function auditFountainSixCategories(
+    fountainText: string,
+): FountainSixCategoryReport {
+    const emptyDetail = (): FountainCategoryDetail => ({
+        count: 0,
+        example: null,
+    })
+    const report: FountainSixCategoryReport = {
+        sluglines: emptyDetail(),
+        actionLines: emptyDetail(),
+        characterCues: emptyDetail(),
+        parentheticals: emptyDetail(),
+        dialogueLines: emptyDetail(),
+        transitions: emptyDetail(),
+        dateHeader: null,
+        startTimeHm: null,
+        chronology: {},
+        allValid: false,
+    }
+    if (!fountainText || fountainText.trim().length === 0) {
+        return report
+    }
+    let chronology: FountainChronologyHeaders = {}
+    try {
+        chronology = parseFountainChronology(fountainText)
+    } catch {
+        chronology = {}
+    }
+    report.chronology = chronology
+    if (chronology.date) report.dateHeader = chronology.date
+    if (chronology.startTimeHm) report.startTimeHm = chronology.startTimeHm
+
+    const lines = fountainText.replace(/\r\n/g, '\n').split('\n')
+    let inBlockComment = false
+    let currentSpeaker: string | null = null
+
+    const record = (detail: FountainCategoryDetail, value: string) => {
+        detail.count += 1
+        if (detail.example === null) detail.example = value
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i] ?? ''
+        const line = rawLine.trim()
+
+        if (inBlockComment) {
+            if (line.includes('*/')) inBlockComment = false
+            continue
+        }
+        if (line.startsWith('/*')) {
+            if (!line.includes('*/')) inBlockComment = true
+            continue
+        }
+        if (line.length === 0) {
+            currentSpeaker = null
+            continue
+        }
+        if (line === '===') continue
+        if (TITLE_HEADER_REGEX.test(line)) continue
+        if (/^(INT\.|EXT\.|INT\/EXT\.|EST\.)/i.test(line)) {
+            record(report.sluglines, line)
+            currentSpeaker = null
+            continue
+        }
+        if (isFountainTransitionLine(line)) {
+            record(report.transitions, line)
+            currentSpeaker = null
+            continue
+        }
+        if (isFountainParenthetical(line)) {
+            record(report.parentheticals, line)
+            continue
+        }
+        if (isFountainCharacterCue(line)) {
+            const normalized = normalizeSpeakerCue(line)
+            record(report.characterCues, normalized)
+            currentSpeaker = normalized
+            continue
+        }
+        if (currentSpeaker !== null) {
+            record(report.dialogueLines, line)
+        } else {
+            record(report.actionLines, line)
+        }
+    }
+
+    report.allValid =
+        report.sluglines.count > 0 &&
+        report.actionLines.count > 0 &&
+        report.characterCues.count > 0 &&
+        report.parentheticals.count > 0 &&
+        report.dialogueLines.count > 0 &&
+        report.transitions.count > 0 &&
+        report.dateHeader !== null &&
+        report.startTimeHm !== null
+
+    return report
+}
+
 export function extractFountainActionLines(fountainText: string): string[] {
     if (!fountainText || fountainText.trim().length === 0) {
         return []

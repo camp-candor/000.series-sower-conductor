@@ -1,2 +1,6 @@
 export { initPipeline } from './buz/pipeline.buzz.js'
 export { updatePipeline } from './buz/pipeline.buzz.js'
+export { batchIngestAutoScripts } from './buz/pipeline.buzz.js'
+export { compileEpisodeStack } from './buz/pipeline.buzz.js'
+export { compileAutoScriptDirectoryPipeline } from './buz/pipeline.buzz.js'
+export { verifyConductorStackReplayEquivalence } from './buz/pipeline.buzz.js'

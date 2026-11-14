@@ -15,4 +15,10 @@ export class UpdateScene implements Action {
     constructor(public bale: SceneBit) {}
 }
 
-export type Actions = InitScene | UpdateScene
+export const PARSE_SCENE_TRANSITIONS = '[Scene action] Parse Scene Transitions'
+export class ParseSceneTransitions implements Action {
+    readonly type = PARSE_SCENE_TRANSITIONS
+    constructor(public bale: SceneBit) {}
+}
+
+export type Actions = InitScene | UpdateScene | ParseSceneTransitions

@@ -16,6 +16,12 @@ export function reducer(
         case Act.INIT_PIPELINE:
             return Buzz.initPipeline(clone(model), act.bale, state)
 
+        case Act.BATCH_INGEST_AUTO_SCRIPTS:
+            return Buzz.batchIngestAutoScripts(clone(model), act.bale, state)
+
+        case Act.COMPILE_EPISODE_STACK:
+            return Buzz.compileEpisodeStack(clone(model), act.bale, state)
+
         default:
             return model
     }

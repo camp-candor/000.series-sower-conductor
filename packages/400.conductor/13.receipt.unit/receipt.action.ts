@@ -15,4 +15,11 @@ export class UpdateReceipt implements Action {
     constructor(public bale: ReceiptBit) {}
 }
 
-export type Actions = InitReceipt | UpdateReceipt
+export const SEAL_EPISODE_STACK_RECEIPT =
+    '[Receipt action] Seal Episode Stack Receipt'
+export class SealEpisodeStackReceipt implements Action {
+    readonly type = SEAL_EPISODE_STACK_RECEIPT
+    constructor(public bale: ReceiptBit) {}
+}
+
+export type Actions = InitReceipt | UpdateReceipt | SealEpisodeStackReceipt

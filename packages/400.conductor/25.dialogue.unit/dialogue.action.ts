@@ -13,4 +13,11 @@ export class UpdateDialogue implements Action {
     constructor(public bale: DialogueBit) {}
 }
 
-export type Actions = InitDialogue | UpdateDialogue
+export const EXTRACT_PARENTHETICAL_CUES =
+    '[Dialogue action] Extract Parenthetical Cues'
+export class ExtractParentheticalCues implements Action {
+    readonly type = EXTRACT_PARENTHETICAL_CUES
+    constructor(public bale: DialogueBit) {}
+}
+
+export type Actions = InitDialogue | UpdateDialogue | ExtractParentheticalCues

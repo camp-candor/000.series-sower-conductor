@@ -26,8 +26,24 @@ export const anchorEpisodeChronology = (
     cpy.activeSeriesSlug = String(
         dat.seriesSlug ?? dat.series_slug ?? cpy.activeSeriesSlug,
     )
-    cpy.activeDate = String(dat.startDate ?? dat.start_date ?? cpy.activeDate)
-    cpy.currentClockHm = String(dat.startTimeHm ?? dat.start_time_hm ?? '00:00')
+    const startDate = String(
+        dat.startDate ?? dat.start_date ?? cpy.activeDate ?? '',
+    ).trim()
+    if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        throw new Error(
+            `CHRONOLOGY_INVALID_DATE: startDate [${startDate}] must match YYYY-MM-DD`,
+        )
+    }
+    const startTimeHm = String(
+        dat.startTimeHm ?? dat.start_time_hm ?? '00:00',
+    ).trim()
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTimeHm)) {
+        throw new Error(
+            `INVALID_START_CLOCK: startTimeHm [${startTimeHm}] must match HH:MM`,
+        )
+    }
+    cpy.activeDate = startDate
+    cpy.currentClockHm = startTimeHm
     cpy.sceneTimeline = []
     cpy.cumulativeFrames = 0
     if (global.LIBRARY) {

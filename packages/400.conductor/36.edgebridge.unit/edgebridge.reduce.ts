@@ -1,4 +1,3 @@
-import clone from 'clone-deep'
 import * as Act from './edgebridge.action.js'
 import { EdgebridgeModel } from './edgebridge.model.js'
 import * as Buzz from './edgebridge.buzzer.js'
@@ -11,28 +10,28 @@ export function reducer(
 ) {
     switch (act.type) {
         case Act.INIT_EDGEBRIDGE:
-            return Buzz.initEdgebridge(clone(model), act.bale, state!)
+            return Buzz.initEdgebridge(model, act.bale, state!)
 
         case Act.UPDATE_EDGEBRIDGE:
-            return Buzz.updateEdgebridge(clone(model), act.bale, state!)
+            return Buzz.updateEdgebridge(model, act.bale, state!)
 
         case Act.ACQUIRE_HARDWARE_LEASE:
-            return Buzz.acquireHardwareLease(clone(model), act.bale, state!)
+            return Buzz.acquireHardwareLease(model, act.bale, state!)
 
         case Act.SYNC_EDGE_TELEMETRY:
-            return Buzz.syncEdgeTelemetry(clone(model), act.bale, state!)
+            return Buzz.syncEdgeTelemetry(model, act.bale, state!)
 
         case Act.RENEW_LEASE_HEARTBEAT:
-            return Buzz.renewLeaseHeartbeat(clone(model), act.bale, state!)
+            return Buzz.renewLeaseHeartbeat(model, act.bale, state!)
 
         case Act.TRANSMIT_ASSEMBLY_RECEIPT:
-            return Buzz.transmitAssemblyReceipt(clone(model), act.bale, state!)
+            return Buzz.transmitAssemblyReceipt(model, act.bale, state!)
 
         case Act.TOGGLE_TARGET_ENDPOINT:
-            return Buzz.toggleTargetEndpoint(clone(model), act.bale, state!)
+            return Buzz.toggleTargetEndpoint(model, act.bale, state!)
 
         case Act.POLL_STALENESS_STATUS:
-            return Buzz.pollStalenessStatus(clone(model), act.bale, state!)
+            return Buzz.pollStalenessStatus(model, act.bale, state!)
 
         default:
             return model

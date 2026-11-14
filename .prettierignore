@@ -18,6 +18,9 @@ apps/995.library/
 
 # Runtime Data & Telemetry Logs
 data/
+packages/400.conductor/drafts/
+packages/400.conductor/outputs/
+packages/400.conductor/35.remotion.unit/drafts/
 
 # Un-migrated Legacy Workspaces (Quarantined until respective epics)
 packages/133.cloudflare/

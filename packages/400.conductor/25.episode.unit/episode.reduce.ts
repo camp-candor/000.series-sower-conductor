@@ -1,4 +1,3 @@
-import clone from 'clone-deep'
 import * as Act from './episode.action.js'
 import { EpisodeModel } from './episode.model.js'
 import * as Buzz from './episode.buzzer.js'
@@ -11,16 +10,16 @@ export function reducer(
 ) {
     switch (act.type) {
         case Act.UPDATE_EPISODE:
-            return Buzz.updateEpisode(clone(model), act.bale, state)
+            return Buzz.updateEpisode(model, act.bale, state)
 
         case Act.INIT_EPISODE:
-            return Buzz.initEpisode(clone(model), act.bale, state)
+            return Buzz.initEpisode(model, act.bale, state)
 
         case Act.ANCHOR_EPISODE_CHRONOLOGY:
-            return Buzz.anchorEpisodeChronology(clone(model), act.bale, state)
+            return Buzz.anchorEpisodeChronology(model, act.bale, state)
 
         case Act.ADVANCE_EPISODE_SCENE:
-            return Buzz.advanceEpisodeScene(clone(model), act.bale, state)
+            return Buzz.advanceEpisodeScene(model, act.bale, state)
 
         default:
             return model

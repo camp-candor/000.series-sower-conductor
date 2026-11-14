@@ -16,6 +16,9 @@ export function reducer(
         case Act.INIT_SCENE:
             return Buzz.initScene(clone(model), act.bale, state)
 
+        case Act.PARSE_SCENE_TRANSITIONS:
+            return Buzz.parseSceneTransitions(clone(model), act.bale, state)
+
         default:
             return model
     }

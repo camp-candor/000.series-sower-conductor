@@ -16,6 +16,9 @@ export function reducer(
         case Act.INIT_RECEIPT:
             return Buzz.initReceipt(clone(model), act.bale, state)
 
+        case Act.SEAL_EPISODE_STACK_RECEIPT:
+            return Buzz.sealEpisodeStack(clone(model), act.bale, state)
+
         default:
             return model
     }

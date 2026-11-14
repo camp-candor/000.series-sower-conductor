@@ -23,7 +23,23 @@ export default class State extends Rx.BehaviorSubject<any> {
     }
 
     reducedApp(nextState: any, key: any) {
-        for (var k in Effect.reducer) Effect.reducer[k](nextState[k], key, this)
+        for (var k in Effect.reducer) {
+            const updated = Effect.reducer[k](nextState[k], key, this)
+            if (updated !== undefined) {
+                if (
+                    updated &&
+                    typeof (updated as Promise<unknown>).then === 'function'
+                ) {
+                    ;(updated as Promise<unknown>)
+                        .then((resolved) => {
+                            if (resolved !== undefined) nextState[k] = resolved
+                        })
+                        .catch(() => {})
+                } else {
+                    nextState[k] = updated
+                }
+            }
+        }
         return nextState
     }
 

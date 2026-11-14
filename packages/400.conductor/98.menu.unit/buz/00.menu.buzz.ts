@@ -12,6 +12,8 @@ import {
     formatTelemetryLine,
     streamConsoleTelemetry,
 } from './telemetryStreamer.buzz.js'
+import { compileAutoScriptDirectoryPipeline } from '../../16.pipeline.unit/buz/pipeline.buzz.js'
+import { sealEpisodeStackReceipt } from '../../13.receipt.unit/buz/receipt.buzz.js'
 import {
     compileParallaxSceneAst,
     discoverDraftScenePairs,
@@ -52,6 +54,7 @@ export const TRANSLATE_SOMATIC_LABEL = '[5] TRANSLATE SOMATIC BASIS-POINT DSP'
 export const COMPUTE_DUCKING_LABEL = '[6] COMPUTE ACOUSTIC DUCKING CURVE'
 export const CONDUCTOR_TIMECODE_LABEL =
     '[T] INSPECT EPISODE CHRONOLOGY TIMECODE'
+export const AUTO_SCRIPT_BATCH_LABEL = 'BATCH INGEST AUTO-SCRIPT STACK'
 
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
@@ -652,7 +655,11 @@ export const runConductorTimecodeAudit = async (
     const dat = ((bal?.dat ?? {}) as Record<string, any>) ?? {}
     const baseDir = dat.baseDir ? String(dat.baseDir) : undefined
     const chrono = resolveAuditChronology(bal, baseDir)
-    const durationFrames = Number(dat.durationFrames ?? 48)
+    const rawDuration = Number(dat.durationFrames ?? 48)
+    const durationFrames =
+        Number.isFinite(rawDuration) && rawDuration > 0
+            ? Math.floor(rawDuration)
+            : 48
 
     const emit = async (msg: string) => {
         const clean = sanitizeTo7BitAscii(msg)
@@ -697,6 +704,151 @@ export const runConductorTimecodeAudit = async (
     return cpy
 }
 
+export const runAutoScriptBatchIngestMenu = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste?: State,
+): Promise<MenuModel> => {
+    const emit = async (msg: string) => {
+        const clean = sanitizeTo7BitAscii(msg)
+        if (ste && typeof ste.hunt === 'function') {
+            await ste
+                .hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: clean,
+                })
+                .catch(() => {})
+        } else if (global.LIBRARY) {
+            await global.LIBRARY.hunt('[Console action] Update Console', {
+                idx: 'cns00',
+                src: clean,
+            }).catch(() => {})
+        } else {
+            await streamConsoleTelemetry(clean)
+        }
+    }
+    try {
+        const dat = ((bal?.dat ?? {}) as Record<string, any>) ?? {}
+        let inputDir: string | undefined = dat.inputDir
+            ? String(dat.inputDir)
+            : undefined
+        if (!inputDir) {
+            const candidates: string[] = []
+            const ingressRoot = path.join(process.cwd(), 'data', 'ingress')
+            if (fs.existsSync(ingressRoot)) {
+                for (const slug of fs.readdirSync(ingressRoot)) {
+                    const p = path.join(ingressRoot, slug, 'auto-script')
+                    if (fs.existsSync(p)) candidates.push(p)
+                }
+            }
+            const siblingRoot = path.resolve(
+                process.cwd(),
+                '..',
+                '000.series-sower-engine',
+                'drafts',
+                'auto-script',
+            )
+            if (fs.existsSync(siblingRoot)) {
+                try {
+                    const entries = fs.readdirSync(siblingRoot)
+                    let pushed = false
+                    for (const e of entries) {
+                        const p = path.join(siblingRoot, e)
+                        try {
+                            if (fs.statSync(p).isDirectory()) {
+                                candidates.push(p)
+                                pushed = true
+                            }
+                        } catch {
+                            // ignore stat faults
+                        }
+                    }
+                    if (!pushed) candidates.push(siblingRoot)
+                } catch {
+                    candidates.push(siblingRoot)
+                }
+            }
+            const localDrafts = path.join(
+                process.cwd(),
+                'drafts',
+                'auto-script',
+            )
+            if (fs.existsSync(localDrafts)) candidates.push(localDrafts)
+            if (candidates.length === 0) {
+                throw new Error(
+                    '[BATCH_INPUT_DIR_MISSING] No stacked auto-script directory found',
+                )
+            }
+            if (!global.LIBRARY) {
+                inputDir = candidates[0]
+            } else {
+                const gridBit = await global.LIBRARY.hunt(
+                    '[Grid action] Update Grid',
+                    {
+                        x: CONDUCTOR_GRID_LEFT.x,
+                        y: CONDUCTOR_GRID_LEFT.y,
+                        xSpan: CONDUCTOR_GRID_LEFT.xSpan,
+                        ySpan: CONDUCTOR_GRID_LEFT.ySpan,
+                    },
+                )
+                const choiceBit = await global.LIBRARY.hunt(
+                    '[Open action] Open Choice',
+                    {
+                        dat: {
+                            clr0: 0,
+                            clr1: 3,
+                            cb: async (focusedLabel: string) => {
+                                await emit(`>> [BATCH:HOVER] ${focusedLabel}`)
+                            },
+                        },
+                        src: 'VERTICAL',
+                        lst: candidates,
+                        net: gridBit?.grdBit?.dat,
+                    },
+                )
+                inputDir = String(choiceBit?.chcBit?.src ?? candidates[0] ?? '')
+            }
+        }
+        if (!inputDir || inputDir.length === 0) {
+            throw new Error('[BATCH_INPUT_DIR_MISSING] Empty inputDir')
+        }
+        const manifest = compileAutoScriptDirectoryPipeline(inputDir)
+        const receipt = sealEpisodeStackReceipt(manifest)
+        for (let i = 0; i < manifest.scenes.length; i++) {
+            const s = manifest.scenes[i]!
+            const num = String(i + 1).padStart(4, '0')
+            await emit(
+                `>> [BATCH:SCENE] #${num} | ${s.start_date} ${s.start_time_hm} (${s.daypart}) | TC ${s.episode_from_timecode} -> ${s.episode_to_timecode} | 6-CAT: PASS`,
+            )
+        }
+        await emit(
+            `>> [BATCH:SEALED] scenes=${receipt.scene_count} frames=${receipt.total_frames} sha=${receipt.manifest_sha256}`,
+        )
+        if (bal?.slv) {
+            bal.slv({
+                mnuBit: {
+                    idx: 'batch-ingest-auto-scripts',
+                    val: 1,
+                    dat: { manifest, receipt },
+                },
+            })
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        await emit(`:: [BATCH:FAIL] ${msg}`)
+        if (bal?.slv) {
+            bal.slv({
+                mnuBit: {
+                    idx: 'batch-ingest-auto-scripts-error',
+                    val: 0,
+                    src: msg,
+                },
+            })
+        }
+    }
+    return cpy
+}
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     [HYGIENE_AUDIT_LABEL]:
         'Scan unit-colocated topology, NodeNext .js specifiers, and 25.dialogue/25.episode isolation.',
@@ -728,6 +880,8 @@ export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         'Programmatically trigger 000.audio-microservice via shared global pivot bus.',
     [CONDUCTOR_TIMECODE_LABEL]:
         'Inspect episode chronology plus 24fps SMPTE timecode anchoring.',
+    [AUTO_SCRIPT_BATCH_LABEL]:
+        'Ingest stacked auto-script folder plus seal chronological episode manifest.',
     'ROOT MENU':
         'Exit Conductor flight deck and return to 995.library root cockpit.',
 }
@@ -748,6 +902,7 @@ export const choices: string[] = [
     'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
     'DISPATCH REMOTE AUDIO PIVOT',
     CONDUCTOR_TIMECODE_LABEL,
+    AUTO_SCRIPT_BATCH_LABEL,
     'ROOT MENU',
 ]
 
@@ -856,6 +1011,13 @@ export const CONDUCTOR_MENU_CHOICES = [
         tooltip:
             'Inspect episode chronology plus 24fps SMPTE timecode anchoring.',
         actionType: '[Menu action] Audit Conductor Timecode',
+    },
+    {
+        id: 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS',
+        label: AUTO_SCRIPT_BATCH_LABEL,
+        tooltip:
+            'Ingest stacked auto-script folder plus seal chronological episode manifest.',
+        actionType: '[Menu action] Batch Ingest Auto-Script Stack',
     },
     {
         id: 'CHOICE_ROOT_RETURN',
@@ -1382,6 +1544,18 @@ export const updateMenu = async (
             await runConductorTimecodeAudit(cpy, bal, ste)
             return cpy
         }
+
+        if (
+            bal?.src === AUTO_SCRIPT_BATCH_LABEL ||
+            (bal?.dat as any)?.selection === AUTO_SCRIPT_BATCH_LABEL ||
+            bal?.src === 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS' ||
+            bal?.src === ActMnu.BATCH_INGEST_AUTO_SCRIPT_STACK
+        ) {
+            cpy.activeSelection = 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS'
+            cpy.lastActionTimestamp = Date.now()
+            await runAutoScriptBatchIngestMenu(cpy, bal, ste)
+            return cpy
+        }
         const lst = (cpy.menuChoices || CONDUCTOR_MENU_CHOICES).map((c: any) =>
             typeof c === 'string' ? c : c.label,
         )
@@ -1499,6 +1673,16 @@ export const updateMenu = async (
         cpy.activeSelection = 'CHOICE_CONDUCTOR_TIMECODE'
         cpy.lastActionTimestamp = Date.now()
         await runConductorTimecodeAudit(cpy, bal, ste)
+        return cpy
+    }
+
+    if (
+        selectedLabel === AUTO_SCRIPT_BATCH_LABEL ||
+        selectedLabel === 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS'
+    ) {
+        cpy.activeSelection = 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS'
+        cpy.lastActionTimestamp = Date.now()
+        await runAutoScriptBatchIngestMenu(cpy, bal, ste)
         return cpy
     }
 
@@ -1812,6 +1996,10 @@ export const updateMenu = async (
 
             case 'CHOICE_CONDUCTOR_TIMECODE':
                 await runConductorTimecodeAudit(cpy, bal, ste)
+                break
+
+            case 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS':
+                await runAutoScriptBatchIngestMenu(cpy, bal, ste)
                 break
 
             case 'CHOICE_ROOT_RETURN': {

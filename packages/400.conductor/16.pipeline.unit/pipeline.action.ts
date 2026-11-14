@@ -15,4 +15,18 @@ export class UpdatePipeline implements Action {
     constructor(public bale: PipelineBit) {}
 }
 
-export type Actions = InitPipeline | UpdatePipeline
+export const BATCH_INGEST_AUTO_SCRIPTS =
+    '[Pipeline action] Batch Ingest Auto Scripts'
+export class BatchIngestAutoScripts implements Action {
+    readonly type = BATCH_INGEST_AUTO_SCRIPTS
+    constructor(public bale: PipelineBit) {}
+}
+
+export const COMPILE_EPISODE_STACK = '[Pipeline action] Compile Episode Stack'
+export class CompileEpisodeStack implements Action {
+    readonly type = COMPILE_EPISODE_STACK
+    constructor(public bale: PipelineBit) {}
+}
+
+export type Actions =
+    InitPipeline | UpdatePipeline | BatchIngestAutoScripts | CompileEpisodeStack
