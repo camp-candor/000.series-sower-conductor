@@ -15,4 +15,18 @@ export class UpdateEpisode implements Action {
     constructor(public bale: EpisodeBit) {}
 }
 
-export type Actions = InitEpisode | UpdateEpisode
+export const ANCHOR_EPISODE_CHRONOLOGY =
+    '[Episode action] Anchor Episode Chronology'
+export class AnchorEpisodeChronology implements Action {
+    readonly type = ANCHOR_EPISODE_CHRONOLOGY
+    constructor(public bale: EpisodeBit) {}
+}
+
+export const ADVANCE_EPISODE_SCENE = '[Episode action] Advance Episode Scene'
+export class AdvanceEpisodeScene implements Action {
+    readonly type = ADVANCE_EPISODE_SCENE
+    constructor(public bale: EpisodeBit) {}
+}
+
+export type Actions =
+    InitEpisode | UpdateEpisode | AnchorEpisodeChronology | AdvanceEpisodeScene

@@ -20,4 +20,11 @@ export class DispatchRemoteAudioPivot implements Action {
     constructor(public bale: MenuBit) {}
 }
 
-export type Actions = InitMenu | UpdateMenu | DispatchRemoteAudioPivot
+export const AUDIT_CONDUCTOR_TIMECODE = '[Menu action] Audit Conductor Timecode'
+export class AuditConductorTimecode implements Action {
+    readonly type = AUDIT_CONDUCTOR_TIMECODE
+    constructor(public bale: MenuBit) {}
+}
+
+export type Actions =
+    InitMenu | UpdateMenu | DispatchRemoteAudioPivot | AuditConductorTimecode

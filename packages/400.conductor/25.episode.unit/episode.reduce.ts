@@ -16,6 +16,12 @@ export function reducer(
         case Act.INIT_EPISODE:
             return Buzz.initEpisode(clone(model), act.bale, state)
 
+        case Act.ANCHOR_EPISODE_CHRONOLOGY:
+            return Buzz.anchorEpisodeChronology(clone(model), act.bale, state)
+
+        case Act.ADVANCE_EPISODE_SCENE:
+            return Buzz.advanceEpisodeScene(clone(model), act.bale, state)
+
         default:
             return model
     }

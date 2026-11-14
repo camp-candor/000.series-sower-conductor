@@ -43,6 +43,8 @@ export interface QuantizedShot {
     target_frames: number
     from_frame: number
     to_frame: number
+    from_timecode?: string
+    to_timecode?: string
     sample_offset_start: number
     sample_offset_end: number
     causal_vae: CausalVaeAllocation

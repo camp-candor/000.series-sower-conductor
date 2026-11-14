@@ -2,7 +2,85 @@ import { ExtractedDialogueTurn } from '../fce/parity.interface.js'
 
 const CUE_EXTENSION_REGEX =
     /\s*\((?:CONT'D|CONT\u2019D|O\.S\.|V\.O\.|OFF)\)\s*$/i
-const TITLE_HEADER_REGEX = /^(Title|Credit|Author|Draft date|Contact):/i
+const TITLE_HEADER_REGEX =
+    /^(Title|Credit|Author|Draft date|Contact|Series|Scene|Date|Start-Time|Timecode|Daypart|Timezone|Era):/i
+
+export interface FountainChronologyHeaders {
+    date?: string
+    startTimeHm?: string
+    startTimeHms?: string
+    timecodeSmpte?: string
+    daypart?: string
+    timezoneLabel?: string
+    eraLabel?: string
+    series?: string
+    scene?: string
+}
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+const HM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
+const HMS_REGEX = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
+
+export function parseFountainChronology(
+    fountainText: string,
+): FountainChronologyHeaders {
+    const result: FountainChronologyHeaders = {}
+    if (!fountainText || fountainText.trim().length === 0) {
+        return result
+    }
+    const lines = fountainText.replace(/\r\n/g, '\n').split('\n')
+    for (const rawLine of lines) {
+        const line = rawLine.trim()
+        if (line.length === 0) continue
+        const match = line.match(/^([A-Za-z\- ]+):\s*(.*)$/)
+        if (!match) continue
+        const key = match[1]!.trim().toLowerCase()
+        const value = match[2]!.trim()
+        switch (key) {
+            case 'date':
+                if (!DATE_REGEX.test(value)) {
+                    throw new Error(
+                        `CHRONOLOGY_INVALID_DATE: Date [${value}] must match YYYY-MM-DD`,
+                    )
+                }
+                result.date = value
+                break
+            case 'start-time':
+                if (HMS_REGEX.test(value)) {
+                    result.startTimeHms = value
+                    result.startTimeHm = value.slice(0, 5)
+                } else if (HM_REGEX.test(value)) {
+                    result.startTimeHm = value
+                } else {
+                    throw new Error(
+                        `CHRONOLOGY_INVALID_START_TIME: Start-Time [${value}] must match HH:MM or HH:MM:SS`,
+                    )
+                }
+                break
+            case 'timecode':
+                result.timecodeSmpte = value
+                break
+            case 'daypart':
+                result.daypart = value
+                break
+            case 'timezone':
+                result.timezoneLabel = value
+                break
+            case 'era':
+                result.eraLabel = value
+                break
+            case 'series':
+                result.series = value
+                break
+            case 'scene':
+                result.scene = value
+                break
+            default:
+                break
+        }
+    }
+    return result
+}
 
 export function normalizePunctuation(text: string): string {
     if (!text) return ''
@@ -97,7 +175,9 @@ export function parseFountainDialogue(
             continue
         }
 
-        // Handle title page logic
+        // Handle title page logic: stay in title page across ALL
+        // contiguous TITLE_HEADER_REGEX lines (no line-count cap) until a
+        // blank line or a non-header token is reached.
         if (inTitlePage) {
             if (line === '===') {
                 inTitlePage = false
@@ -106,18 +186,7 @@ export function parseFountainDialogue(
             if (TITLE_HEADER_REGEX.test(line) || line.length === 0) {
                 continue
             }
-            // If we encounter a line that isn't a title header and isn't empty, we might not be in a title page
-            if (
-                line.length > 0 &&
-                !TITLE_HEADER_REGEX.test(line) &&
-                !line.startsWith('===') &&
-                i > 5
-            ) {
-                inTitlePage = false
-            }
-            if (inTitlePage && TITLE_HEADER_REGEX.test(line)) {
-                continue
-            }
+            inTitlePage = false
         }
 
         // If still in title page explicitly, skip

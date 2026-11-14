@@ -20,7 +20,11 @@ import {
     PARALLAX_DINNER_FOUNTAIN_SOURCE,
     DraftScenePair,
 } from '../../34.abstractsyntaxtree.unit/buz/parallaxAstCompiler.buzz.js'
-import { extractFountainActionLines } from '../../34.abstractsyntaxtree.unit/buz/fountainTokenizer.buzz.js'
+import { frameToSmpteTimecode24 } from '../../24.frame.unit/buz/frame.buzz.js'
+import {
+    parseFountainChronology,
+    extractFountainActionLines,
+} from '../../34.abstractsyntaxtree.unit/buz/fountainTokenizer.buzz.js'
 import {
     SceneAST,
     SceneASTSchema,
@@ -46,6 +50,8 @@ export const TILE_TIMELINE_LABEL = '[3] TILE DISCRETE 24 FPS TIMELINE'
 export const CONFORM_LATTICE_LABEL = '[4] CONFORM CAUSAL 4N+1 LATENT LATTICE'
 export const TRANSLATE_SOMATIC_LABEL = '[5] TRANSLATE SOMATIC BASIS-POINT DSP'
 export const COMPUTE_DUCKING_LABEL = '[6] COMPUTE ACOUSTIC DUCKING CURVE'
+export const CONDUCTOR_TIMECODE_LABEL =
+    '[T] INSPECT EPISODE CHRONOLOGY TIMECODE'
 
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
@@ -560,6 +566,137 @@ export const runAcousticDuckingMenu = async (
     return cpy
 }
 
+export const resolveAuditChronology = (bal?: MenuBit, baseDir?: string) => {
+    const dat = ((bal?.dat ?? {}) as Record<string, any>) ?? {}
+    const direct = dat.dialogueAst?.chronology ?? dat.chronology
+    if (direct?.start_date && direct?.start_time_hm) {
+        return {
+            sceneId: String(dat.sceneId ?? direct.scene_id ?? 'ep01_sc01'),
+            startDate: String(direct.start_date),
+            startTimeHm: String(direct.start_time_hm),
+            daypart: String(direct.daypart ?? 'NIGHT'),
+            timecodeSmpte: String(
+                direct.timecode_smpte ??
+                    direct.start_timecode_smpte ??
+                    '21:00:00:00',
+            ),
+        }
+    }
+    const root = baseDir ? path.resolve(baseDir) : process.cwd()
+    const astPath = path.join(root, 'drafts', 'dialogue_ast.json')
+    if (fs.existsSync(astPath)) {
+        try {
+            const raw = JSON.parse(fs.readFileSync(astPath, 'utf8'))
+            const chrono = raw?.chronology
+            if (chrono?.start_date && chrono?.start_time_hm) {
+                return {
+                    sceneId: String(raw?.scene_id ?? 'ep01_sc01'),
+                    startDate: String(chrono.start_date),
+                    startTimeHm: String(chrono.start_time_hm),
+                    daypart: String(chrono.daypart ?? 'NIGHT'),
+                    timecodeSmpte: String(
+                        chrono.timecode_smpte ??
+                            chrono.start_timecode_smpte ??
+                            '21:00:00:00',
+                    ),
+                }
+            }
+        } catch {
+            // fall through to fountain scan
+        }
+    }
+    const draftsDir = path.join(root, 'drafts')
+    if (fs.existsSync(draftsDir)) {
+        try {
+            const newest = fs
+                .readdirSync(draftsDir)
+                .filter((f) => f.endsWith('.fountain'))
+                .sort()
+                .pop()
+            if (newest) {
+                const text = fs.readFileSync(
+                    path.join(draftsDir, newest),
+                    'utf8',
+                )
+                const headers = parseFountainChronology(text)
+                if (headers.date && headers.startTimeHm) {
+                    return {
+                        sceneId: String(dat.sceneId ?? 'ep01_sc01'),
+                        startDate: String(headers.date),
+                        startTimeHm: String(headers.startTimeHm),
+                        daypart: String(headers.daypart ?? 'NIGHT'),
+                        timecodeSmpte: String(
+                            headers.timecodeSmpte ?? '21:00:00:00',
+                        ),
+                    }
+                }
+            }
+        } catch {
+            // fall through to defaults
+        }
+    }
+    return {
+        sceneId: String(dat.sceneId ?? 'ep01_sc01'),
+        startDate: '2026-10-31',
+        startTimeHm: '21:00',
+        daypart: 'NIGHT',
+        timecodeSmpte: '21:00:00:00',
+    }
+}
+
+export const runConductorTimecodeAudit = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste?: State,
+): Promise<MenuModel> => {
+    const dat = ((bal?.dat ?? {}) as Record<string, any>) ?? {}
+    const baseDir = dat.baseDir ? String(dat.baseDir) : undefined
+    const chrono = resolveAuditChronology(bal, baseDir)
+    const durationFrames = Number(dat.durationFrames ?? 48)
+
+    const emit = async (msg: string) => {
+        const clean = sanitizeTo7BitAscii(msg)
+        if (ste && typeof ste.hunt === 'function') {
+            await ste
+                .hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: clean,
+                })
+                .catch(() => {})
+        } else if (global.LIBRARY) {
+            await global.LIBRARY.hunt('[Console action] Update Console', {
+                idx: 'cns00',
+                src: clean,
+            }).catch(() => {})
+        } else {
+            await streamConsoleTelemetry(clean)
+        }
+    }
+
+    await emit(
+        `>> [COND:CHRONO] Scene: ${chrono.sceneId} | Start: ${chrono.startDate} ${chrono.startTimeHm} (${chrono.daypart})`,
+    )
+    const startTc = frameToSmpteTimecode24(0, chrono.startTimeHm)
+    const endTc = frameToSmpteTimecode24(
+        Math.max(0, durationFrames - 1),
+        chrono.startTimeHm,
+    )
+    await emit(
+        `>> [COND:TIMECODE] TC ${startTc} -> ${endTc} | Frames: ${durationFrames} @ 24fps`,
+    )
+
+    if (bal?.slv) {
+        bal.slv({
+            mnuBit: {
+                idx: 'audit-conductor-timecode-success',
+                val: 0,
+                dat: { chronology: chrono, startTc, endTc, durationFrames },
+            },
+        })
+    }
+    return cpy
+}
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     [HYGIENE_AUDIT_LABEL]:
         'Scan unit-colocated topology, NodeNext .js specifiers, and 25.dialogue/25.episode isolation.',
@@ -589,6 +726,8 @@ export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         'Calculate -14dB sidechain ducking curve and commit drafts/exposure_sheet.json.',
     'DISPATCH REMOTE AUDIO PIVOT':
         'Programmatically trigger 000.audio-microservice via shared global pivot bus.',
+    [CONDUCTOR_TIMECODE_LABEL]:
+        'Inspect episode chronology plus 24fps SMPTE timecode anchoring.',
     'ROOT MENU':
         'Exit Conductor flight deck and return to 995.library root cockpit.',
 }
@@ -608,6 +747,7 @@ export const choices: string[] = [
     'QUANTIZE ACOUSTIC MASTER CLOCK',
     'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
     'DISPATCH REMOTE AUDIO PIVOT',
+    CONDUCTOR_TIMECODE_LABEL,
     'ROOT MENU',
 ]
 
@@ -709,6 +849,13 @@ export const CONDUCTOR_MENU_CHOICES = [
         tooltip:
             'Programmatically trigger 000.audio-microservice via shared global pivot bus.',
         actionType: '[Menu action] Dispatch Remote Audio Pivot',
+    },
+    {
+        id: 'CHOICE_CONDUCTOR_TIMECODE',
+        label: CONDUCTOR_TIMECODE_LABEL,
+        tooltip:
+            'Inspect episode chronology plus 24fps SMPTE timecode anchoring.',
+        actionType: '[Menu action] Audit Conductor Timecode',
     },
     {
         id: 'CHOICE_ROOT_RETURN',
@@ -926,6 +1073,22 @@ export const runParallaxDinnerAudioFirstPipeline = async (
             baseDir,
         })
 
+        try {
+            const chronoHeaders = parseFountainChronology(fountainSource)
+            if (chronoHeaders.date && chronoHeaders.startTimeHm) {
+                await streamConsoleTelemetry(
+                    `>> [COND:CHRONO] Start: ${chronoHeaders.date} ${chronoHeaders.startTimeHm} (${chronoHeaders.daypart ?? 'NIGHT'})`,
+                )
+            } else if (dat.dialogueAst?.chronology) {
+                const dc = dat.dialogueAst.chronology
+                await streamConsoleTelemetry(
+                    `>> [COND:CHRONO] Start: ${dc.start_date} ${dc.start_time_hm} (${dc.daypart})`,
+                )
+            }
+        } catch {
+            // chronology banner optional when headers absent
+        }
+
         // 1. AST Parity Compilation (accepts any valid turn count >= 1 and resolves speaker cues dynamically against bible-state.json)
         const ast = compileParallaxSceneAst(fountainSource, {
             sceneId: dat.sceneId || 'ep01_sc01',
@@ -971,6 +1134,30 @@ export const runParallaxDinnerAudioFirstPipeline = async (
         await streamConsoleTelemetry(
             '>> [PARALLAX:CLOCK] [OK] Acoustic master clock quantized at 24.0 fps with zero drift.',
         )
+        try {
+            const chrono = ast.chronology
+            const shotWindows = exposureDoc.speechWindows ?? []
+            if (chrono) {
+                await streamConsoleTelemetry(
+                    `>> [COND:CHRONO] Scene: ${ast.scene_id} | Start: ${chrono.start_date} ${chrono.start_time_hm} (${chrono.daypart})`,
+                )
+            }
+            shotWindows.slice(0, 4).forEach((w: any, i: number) => {
+                const fromTc = frameToSmpteTimecode24(
+                    w.startFrame ?? i * 50,
+                    chrono?.start_time_hm,
+                )
+                const toTc = frameToSmpteTimecode24(
+                    w.endFrame ?? i * 50 + 30,
+                    chrono?.start_time_hm,
+                )
+                void streamConsoleTelemetry(
+                    `>> [COND:TIMECODE] TC ${fromTc} -> ${toTc} | Frames: ${(w.endFrame ?? 30) - (w.startFrame ?? 0)} @ 24fps`,
+                )
+            })
+        } catch {
+            // telemetry optional
+        }
         await streamConsoleTelemetry(
             `>> [PARALLAX:FOLEY] [OK] ${foleyCount} Foley cues matched with Mulberry32 + :retry1 anti-clustering (-14.0 dB ducking).`,
         )
@@ -1183,6 +1370,18 @@ export const updateMenu = async (
             await runParallaxDinnerAudioFirstPipeline(cpy, bal, ste)
             return cpy
         }
+
+        if (
+            bal?.src === CONDUCTOR_TIMECODE_LABEL ||
+            (bal?.dat as any)?.selection === CONDUCTOR_TIMECODE_LABEL ||
+            bal?.src === 'CHOICE_CONDUCTOR_TIMECODE' ||
+            bal?.src === ActMnu.AUDIT_CONDUCTOR_TIMECODE
+        ) {
+            cpy.activeSelection = 'CHOICE_CONDUCTOR_TIMECODE'
+            cpy.lastActionTimestamp = Date.now()
+            await runConductorTimecodeAudit(cpy, bal, ste)
+            return cpy
+        }
         const lst = (cpy.menuChoices || CONDUCTOR_MENU_CHOICES).map((c: any) =>
             typeof c === 'string' ? c : c.label,
         )
@@ -1293,6 +1492,16 @@ export const updateMenu = async (
         return cpy
     }
 
+    if (
+        selectedLabel === CONDUCTOR_TIMECODE_LABEL ||
+        selectedLabel === 'CHOICE_CONDUCTOR_TIMECODE'
+    ) {
+        cpy.activeSelection = 'CHOICE_CONDUCTOR_TIMECODE'
+        cpy.lastActionTimestamp = Date.now()
+        await runConductorTimecodeAudit(cpy, bal, ste)
+        return cpy
+    }
+
     const matchedChoice = CONDUCTOR_MENU_CHOICES.find(
         (c) => c.label === selectedLabel || c.id === selectedLabel,
     )
@@ -1362,6 +1571,17 @@ export const updateMenu = async (
                     if (foleyMatches.length > 0) {
                         await streamConsoleTelemetry(
                             `>> [MENU:FOLEY] Matched ${foleyMatches.length} Foley cues from [${selectedPair.label}] against [${manifest.seriesSlug}] registry.`,
+                        )
+                    }
+
+                    if (compiledAst?.chronology) {
+                        const cc = compiledAst.chronology
+                        await streamConsoleTelemetry(
+                            `>> [COND:CHRONO] Scene: ${compiledAst.scene_id} | Start: ${cc.start_date} ${cc.start_time_hm} (${cc.daypart})`,
+                        )
+                        const tc = frameToSmpteTimecode24(0, cc.start_time_hm)
+                        await streamConsoleTelemetry(
+                            `>> [COND:TIMECODE] TC ${tc} -> ${tc} | Frames: ${compiledAst.lines.length} @ 24fps`,
                         )
                     }
 
@@ -1588,6 +1808,10 @@ export const updateMenu = async (
 
             case 'CHOICE_REMOTE_AUDIO_PIVOT':
                 await dispatchRemoteAudioPivot(cpy, bal, ste)
+                break
+
+            case 'CHOICE_CONDUCTOR_TIMECODE':
+                await runConductorTimecodeAudit(cpy, bal, ste)
                 break
 
             case 'CHOICE_ROOT_RETURN': {

@@ -46,12 +46,21 @@ export interface ExposureSheetShotTrack {
     foley_events: FoleyCueItem[]
 }
 
+export interface ExposureSheetChronology {
+    start_date: string
+    start_time_hm: string
+    start_timecode_smpte: string
+    end_timecode_smpte: string
+    daypart: 'DAWN' | 'MORNING' | 'AFTERNOON' | 'DUSK' | 'NIGHT'
+}
+
 export interface ExposureSheetDocument {
     schema_version: string
     series_id: string
     scene_id: string
     total_frames: number
     total_duration_ms: number
+    chronology?: ExposureSheetChronology
     tracks: {
         track1_dialogue: ExposureSheetShotTrack[]
         track2_foley: FoleyCueItem[]

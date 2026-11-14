@@ -13,6 +13,40 @@ import * as fs from 'node:fs'
 
 export const SAMPLES_PER_FRAME = 2000 // 48000 Hz / 24 fps
 
+export const FRAMES_PER_DAY_24 = 86400 * 24
+
+export const frameToSmpteTimecode24 = (
+    frameIndex: number,
+    startClockHm?: string,
+): string => {
+    if (!Number.isInteger(frameIndex) || frameIndex < 0) {
+        throw new Error(
+            `NEGATIVE_FRAME_INDEX: frameIndex [${frameIndex}] invalid`,
+        )
+    }
+    let baseFrames = 0
+    if (startClockHm !== undefined) {
+        const hm = String(startClockHm).trim()
+        const parsed = hm.match(/^([01]\d|2[0-3]):([0-5]\d)$/)
+        if (!parsed) {
+            throw new Error(
+                `INVALID_START_CLOCK: startClockHm [${startClockHm}] must match HH:MM`,
+            )
+        }
+        const hh = Number(parsed[1])
+        const mm = Number(parsed[2])
+        baseFrames = (hh * 3600 + mm * 60) * 24
+    }
+    const total = (baseFrames + frameIndex) % FRAMES_PER_DAY_24
+    const ff = total % 24
+    const totalSeconds = Math.floor(total / 24)
+    const ss = totalSeconds % 60
+    const mmOut = Math.floor(totalSeconds / 60) % 60
+    const hhOut = Math.floor(totalSeconds / 3600) % 24
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${pad(hhOut)}:${pad(mmOut)}:${pad(ss)}:${pad(ff)}`
+}
+
 export const extractDurationMsViaFfprobe = async (
     wavPath: string,
     mockDurationMs?: number,
@@ -75,6 +109,7 @@ export const calculateCausalVaeAllocation = (
 
 export const quantizeShotTimeline = (
     stems: RawStemDuration[],
+    startClockHm?: string,
 ): TimelineQuantizationReceipt => {
     if (!stems || stems.length === 0) {
         throw new Error('TIMELINE_QUANT_EMPTY: Cannot quantize empty stem list')
@@ -104,6 +139,8 @@ export const quantizeShotTimeline = (
             target_frames: targetFrames,
             from_frame: fromFrame,
             to_frame: toFrame,
+            from_timecode: frameToSmpteTimecode24(fromFrame, startClockHm),
+            to_timecode: frameToSmpteTimecode24(toFrame, startClockHm),
             sample_offset_start: fromFrame * SAMPLES_PER_FRAME,
             sample_offset_end: (toFrame + 1) * SAMPLES_PER_FRAME,
             causal_vae: causalVae,

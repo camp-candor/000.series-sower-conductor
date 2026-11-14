@@ -4,6 +4,7 @@ import type {
     SilenceWindow,
     MultiTrackAudioPlan,
     FoleyCueItem,
+    ExposureSheetChronology,
     ExposureSheetDocument,
     ExposureSheetReceipt,
 } from './audio.interface.js'
@@ -34,6 +35,7 @@ export default interface AudioBit {
         }[]
         foleyCues?: FoleyCueItem[]
         audioPlan?: MultiTrackAudioPlan
+        chronology?: ExposureSheetChronology
     }
     slv?: (result: { audBit: Partial<AudioBit> }) => void
 }

@@ -58,6 +58,27 @@ export const CameraFramingSchema = z
     })
     .strict()
 
+export const SceneChronologySchema = z
+    .object({
+        calendar_system: z.literal('GREGORIAN_24H').default('GREGORIAN_24H'),
+        start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        start_time_hm: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+        start_time_hms: z
+            .string()
+            .regex(/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/)
+            .optional(),
+        timecode_smpte: z.string().regex(/^\d{2}:[0-5]\d:[0-5]\d:\d{2}$/),
+        daypart: z.enum(['DAWN', 'MORNING', 'AFTERNOON', 'DUSK', 'NIGHT']),
+        tick_index: z.number().int().min(0).optional(),
+        tick_seconds: z.number().int().min(1).default(60),
+        frames_per_second: z.number().int().min(1).default(24),
+        timezone_label: z.string().min(1).optional(),
+        era_label: z.string().min(1).optional(),
+    })
+    .strict()
+
+export type SceneChronology = z.infer<typeof SceneChronologySchema>
+
 export const SceneASTSchema = z
     .object({
         scene_id: z.string().min(1),
@@ -74,6 +95,7 @@ export const SceneASTSchema = z
         environment_id: z.string().min(1),
         camera_framing: CameraFramingSchema,
         lines: z.array(DialogueLineSchema).min(1),
+        chronology: SceneChronologySchema.optional(),
     })
     .strict()
 

@@ -3,10 +3,13 @@ import path from 'node:path'
 import {
     SceneAST,
     SceneASTSchema,
+    SceneChronology,
+    SceneChronologySchema,
     DialogueLine,
 } from '../fce/abstractsyntaxtree.interface.js'
 import {
     parseFountainDialogue,
+    parseFountainChronology,
     extractFountainActionLines,
     normalizePunctuation,
 } from './fountainTokenizer.buzz.js'
@@ -41,6 +44,41 @@ export interface CompileSceneAstOptions {
     outputSceneDir?: string
     baseDir?: string
     skipDiskWrite?: boolean
+    chronology?: SceneChronology
+    dialogueAst?: { chronology?: SceneChronology } & Record<string, any>
+}
+
+export function fountainHeadersToSceneChronology(headers: {
+    date?: string
+    startTimeHm?: string
+    startTimeHms?: string
+    timecodeSmpte?: string
+    daypart?: string
+    timezoneLabel?: string
+    eraLabel?: string
+}): SceneChronology | undefined {
+    if (
+        !headers.date ||
+        !headers.startTimeHm ||
+        !headers.timecodeSmpte ||
+        !headers.daypart
+    ) {
+        return undefined
+    }
+    const payload: Record<string, unknown> = {
+        start_date: headers.date,
+        start_time_hm: headers.startTimeHm,
+        timecode_smpte: headers.timecodeSmpte,
+        daypart: headers.daypart,
+        tick_seconds: 60,
+        frames_per_second: 24,
+    }
+    if (headers.startTimeHms) payload['start_time_hms'] = headers.startTimeHms
+    if (headers.timezoneLabel) payload['timezone_label'] = headers.timezoneLabel
+    if (headers.eraLabel) payload['era_label'] = headers.eraLabel
+    const parsed = SceneChronologySchema.safeParse(payload)
+    if (parsed.success) return parsed.data
+    return undefined
 }
 
 export interface DraftScenePair {
@@ -585,6 +623,17 @@ export function compileSeriesSceneAst(
           })
 
     const extracted = parseFountainDialogue(fountainText)
+    let resolvedChronology: SceneChronology | undefined =
+        options.chronology ?? options.dialogueAst?.chronology
+    if (!resolvedChronology) {
+        try {
+            const headers = parseFountainChronology(fountainText)
+            resolvedChronology =
+                fountainHeadersToSceneChronology(headers) ?? undefined
+        } catch {
+            resolvedChronology = undefined
+        }
+    }
 
     const lines: DialogueLine[] = extracted.map((turn, i) => {
         const speakerId = resolveSpeakerCueAgainstBible(turn.speaker, manifest)
@@ -632,6 +681,7 @@ export function compileSeriesSceneAst(
                 : {}),
         },
         lines,
+        ...(resolvedChronology ? { chronology: resolvedChronology } : {}),
     }
 
     SceneASTSchema.parse(ast)

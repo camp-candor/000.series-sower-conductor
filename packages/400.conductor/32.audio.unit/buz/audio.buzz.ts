@@ -23,6 +23,7 @@ export const assembleExposureSheetDocument = (
     foleyEvents: any[],
     ambientLoopPath = 'audio/ambient/machinery_bed.wav',
     baseVolume = 0.4,
+    chronology?: ExposureSheetDocument['chronology'],
 ): ExposureSheetDocument => {
     const lastWindow = windows[windows.length - 1]
     const totalFrames = lastWindow ? lastWindow.to_frame + 1 : 24
@@ -52,6 +53,7 @@ export const assembleExposureSheetDocument = (
         scene_id: sceneId,
         total_frames: totalFrames,
         total_duration_ms: totalDurationMs,
+        ...(chronology ? { chronology } : {}),
         tracks: {
             track1_dialogue: track1,
             track2_foley: foleyEvents,
@@ -88,6 +90,7 @@ export const assembleAcousticExposureSheet = async (
         const foleyCues = bal.dat?.foley_cues || []
         const ambientLoop =
             bal.dat?.ambient_loop_path || 'audio/ambient/machinery_bed.wav'
+        const chronology = bal.dat?.chronology
 
         const doc = assembleExposureSheetDocument(
             seriesId,
@@ -95,6 +98,8 @@ export const assembleAcousticExposureSheet = async (
             windows,
             foleyCues,
             ambientLoop,
+            0.4,
+            chronology,
         )
         ExposureSheetDocumentSchema.parse(doc)
 

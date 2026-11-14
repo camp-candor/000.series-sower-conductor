@@ -178,6 +178,7 @@ describe('98.menu.unit: Blessed Terminal Cockpit Navigation & Telemetry Control'
                 'QUANTIZE ACOUSTIC MASTER CLOCK',
                 'ASSEMBLE ACOUSTIC EXPOSURE SHEET',
                 'DISPATCH REMOTE AUDIO PIVOT',
+                '[T] INSPECT EPISODE CHRONOLOGY TIMECODE',
                 'ROOT MENU',
             ])
         })
