@@ -16,6 +16,8 @@ import {
 } from '../../34.abstractsyntaxtree.unit/buz/fountainTokenizer.buzz.js'
 import { frameToSmpteTimecode24 } from '../../24.frame.unit/buz/frame.buzz.js'
 import { canonicalJsonStringify } from '../../30.canon.unit/buz/canon.buzz.js'
+import { reconcileEpisodeAgendaCompliance } from '../../25.episode.unit/buz/episode.buzz.js'
+import { compileSceneAgendaTentpoleCue } from '../../12.scene.unit/buz/scene.buzz.js'
 
 export const initPipeline = (
     cpy: PipelineModel,
@@ -38,6 +40,8 @@ export interface CompileAutoScriptOptions {
     writeManifest?: boolean
     allowIncomplete?: boolean
     diagnosticMode?: boolean
+    expectedAgendaBeats?: Array<Record<string, any>>
+    requireAllScheduledBeats?: boolean
 }
 
 export function compileAutoScriptDirectoryPipeline(
@@ -117,6 +121,28 @@ export function compileAutoScriptDirectoryPipeline(
             .createHash('sha256')
             .update(text, 'utf8')
             .digest('hex')
+        const agendaBeatIdForCue =
+            report.chronology.agendaBeatId ?? report.chronology.agenda?.beatId
+        const scheduledTimeForCue =
+            report.chronology.scheduledTime ??
+            report.chronology.agenda?.scheduledTime
+        const reserveHeldTicksForCue =
+            report.chronology.reserveHeldTicks ??
+            report.chronology.agenda?.reserveHeldTicks ??
+            0
+        const tentpoleCue = compileSceneAgendaTentpoleCue({
+            chronology:
+                agendaBeatIdForCue !== undefined &&
+                scheduledTimeForCue !== undefined
+                    ? {
+                          agenda: {
+                              agenda_beat_id: agendaBeatIdForCue,
+                              scheduled_time: scheduledTimeForCue,
+                              reserve_held_ticks: reserveHeldTicksForCue,
+                          },
+                      }
+                    : {},
+        })
         scenes.push({
             sequence_index: i,
             file_name: fileName,
@@ -133,8 +159,43 @@ export function compileAutoScriptDirectoryPipeline(
             scene_timecode: sceneTimecode,
             six_category_valid: report.allValid,
             script_sha256: scriptSha256,
+            ...(report.chronology.agendaBeatId !== undefined ||
+            report.chronology.agenda?.beatId !== undefined
+                ? {
+                      agenda_beat_id:
+                          report.chronology.agendaBeatId ??
+                          report.chronology.agenda?.beatId,
+                  }
+                : {}),
+            ...(report.chronology.scheduledTime !== undefined ||
+            report.chronology.agenda?.scheduledTime !== undefined
+                ? {
+                      scheduled_time:
+                          report.chronology.scheduledTime ??
+                          report.chronology.agenda?.scheduledTime,
+                  }
+                : {}),
+            ...(report.chronology.reserveHeldTicks !== undefined ||
+            report.chronology.agenda?.reserveHeldTicks !== undefined
+                ? {
+                      reserve_held_ticks:
+                          report.chronology.reserveHeldTicks ??
+                          report.chronology.agenda?.reserveHeldTicks,
+                  }
+                : {}),
+            agendaTentpole: tentpoleCue.agendaTentpole,
+            slateLeadPauseFrames: tentpoleCue.slateLeadPauseFrames,
         })
         cumulative += frameCount
+    }
+    const agendaCompliance = reconcileEpisodeAgendaCompliance(
+        scenes as Array<Record<string, any>>,
+        (options.expectedAgendaBeats ?? []) as Array<Record<string, any>>,
+    )
+    if (options.requireAllScheduledBeats && !agendaCompliance.compliant) {
+        throw new Error(
+            `[AGENDA_DEADLINE_MISSED] Missing beat(s): ${agendaCompliance.missingBeatIds.join(', ')}`,
+        )
     }
     const manifest: EpisodeStackManifest = {
         schema_version: '1.0.0',
@@ -142,6 +203,7 @@ export function compileAutoScriptDirectoryPipeline(
         total_frames: cumulative,
         total_duration_ms: Math.round((cumulative / 24) * 1000),
         scenes,
+        agendaCompliance,
     }
     EpisodeStackManifestSchema.parse(manifest)
     if (options.manifestOutPath !== undefined) {

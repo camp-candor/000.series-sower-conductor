@@ -100,3 +100,57 @@ export const parseSceneTransitions = (
         })
     return cpy
 }
+
+export interface SceneAgendaTentpoleCue {
+    agendaTentpole: boolean
+    beatId?: string
+    scheduledTime?: string
+    slateLeadPauseFrames: number
+}
+
+export function mapAgendaTentpolePauseFrames(
+    hasReserveHold: boolean,
+    reserveHeldTicks: number,
+): number {
+    const ticks =
+        typeof reserveHeldTicks === 'number' &&
+        Number.isInteger(reserveHeldTicks)
+            ? reserveHeldTicks
+            : 0
+    if (hasReserveHold || ticks > 0) return 36
+    return 24
+}
+
+export function compileSceneAgendaTentpoleCue(
+    sceneAst: Record<string, any>,
+): SceneAgendaTentpoleCue {
+    const chronology = (sceneAst?.chronology ?? {}) as Record<string, any>
+    const agenda = (chronology.agenda ??
+        (sceneAst as Record<string, any>).agenda ??
+        {}) as Record<string, any>
+    const beatId: unknown =
+        agenda.agenda_beat_id ?? agenda.beatId ?? agenda.beat_id
+    const scheduledTime: unknown = agenda.scheduled_time ?? agenda.scheduledTime
+    const rawTicks: unknown =
+        agenda.reserve_held_ticks ?? agenda.reserveHeldTicks
+    if (typeof beatId !== 'string' || beatId.length === 0) {
+        return { agendaTentpole: false, slateLeadPauseFrames: 0 }
+    }
+    if (typeof scheduledTime !== 'string' || scheduledTime.length === 0) {
+        return { agendaTentpole: false, slateLeadPauseFrames: 0 }
+    }
+    const reserveHeldTicks =
+        typeof rawTicks === 'number' && Number.isInteger(rawTicks)
+            ? rawTicks
+            : 0
+    const hasReserveHold = reserveHeldTicks > 0
+    return {
+        agendaTentpole: true,
+        beatId,
+        scheduledTime,
+        slateLeadPauseFrames: mapAgendaTentpolePauseFrames(
+            hasReserveHold,
+            reserveHeldTicks,
+        ),
+    }
+}

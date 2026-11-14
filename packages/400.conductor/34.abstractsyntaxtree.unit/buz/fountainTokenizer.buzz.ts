@@ -3,7 +3,13 @@ import { ExtractedDialogueTurn } from '../fce/parity.interface.js'
 const CUE_EXTENSION_REGEX =
     /\s*\((?:CONT'D|CONT\u2019D|O\.S\.|V\.O\.|OFF)\)\s*$/i
 const TITLE_HEADER_REGEX =
-    /^(Title|Credit|Author|Draft date|Contact|Series|Scene|Date|Start-Time|Timecode|Daypart|Timezone|Era):/i
+    /^(Title|Credit|Author|Draft date|Contact|Series|Scene|Date|Start-Time|End-Time|Timecode|Daypart|Timezone|Era|Act|Agenda-Beat-Id|Scheduled-Time|Reserve-Held-Ticks):/i
+
+export interface FountainAgendaHeaders {
+    beatId: string
+    scheduledTime: string
+    reserveHeldTicks: number
+}
 
 export interface FountainChronologyHeaders {
     date?: string
@@ -15,11 +21,30 @@ export interface FountainChronologyHeaders {
     eraLabel?: string
     series?: string
     scene?: string
+    agendaBeatId?: string
+    scheduledTime?: string
+    reserveHeldTicks?: number
+    agenda?: FountainAgendaHeaders
 }
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 const HM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 const HMS_REGEX = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
+const AGENDA_BEAT_ID_REGEX = /^[a-z0-9_]+$/
+const AGENDA_SCHEDULED_TIME_REGEX =
+    /^\d{4}-\d{2}-\d{2}\s([01]\d|2[0-3]):[0-5]\d$/
+
+function isValidIsoCalendarDate(isoDate: string): boolean {
+    if (!DATE_REGEX.test(isoDate)) return false
+    const [y, m, d] = isoDate.split('-').map((n) => Number(n))
+    if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return false
+    const dt = new Date(Date.UTC(y, m - 1, d))
+    return (
+        dt.getUTCFullYear() === y &&
+        dt.getUTCMonth() === m - 1 &&
+        dt.getUTCDate() === d
+    )
+}
 
 export function parseFountainChronology(
     fountainText: string,
@@ -38,9 +63,9 @@ export function parseFountainChronology(
         const value = match[2]!.trim()
         switch (key) {
             case 'date':
-                if (!DATE_REGEX.test(value)) {
+                if (!isValidIsoCalendarDate(value)) {
                     throw new Error(
-                        `CHRONOLOGY_INVALID_DATE: Date [${value}] must match YYYY-MM-DD`,
+                        `CHRONOLOGY_INVALID_DATE: Date [${value}] must match valid YYYY-MM-DD`,
                     )
                 }
                 result.date = value
@@ -75,8 +100,56 @@ export function parseFountainChronology(
             case 'scene':
                 result.scene = value
                 break
+            case 'agenda-beat-id':
+                if (!AGENDA_BEAT_ID_REGEX.test(value)) {
+                    throw new Error(
+                        `INVALID_FOUNTAIN_AGENDA_BEAT_ID: Agenda-Beat-Id [${value}] must match /^[a-z0-9_]+$/`,
+                    )
+                }
+                result.agendaBeatId = value
+                break
+            case 'scheduled-time':
+                if (
+                    !AGENDA_SCHEDULED_TIME_REGEX.test(value) ||
+                    !isValidIsoCalendarDate(value.slice(0, 10))
+                ) {
+                    throw new Error(
+                        `INVALID_FOUNTAIN_AGENDA_TIMESTAMP: Scheduled-Time [${value}] must match valid YYYY-MM-DD HH:MM`,
+                    )
+                }
+                result.scheduledTime = value
+                break
+            case 'reserve-held-ticks': {
+                const parsed = Number(value)
+                if (!Number.isInteger(parsed) || parsed < 0 || parsed > 1000) {
+                    throw new Error(
+                        `INVALID_FOUNTAIN_AGENDA_RESERVE_TICKS: Reserve-Held-Ticks [${value}] must be integer 0..1000`,
+                    )
+                }
+                result.reserveHeldTicks = parsed
+                break
+            }
             default:
                 break
+        }
+    }
+    if (
+        result.agendaBeatId !== undefined ||
+        result.scheduledTime !== undefined ||
+        result.reserveHeldTicks !== undefined
+    ) {
+        if (
+            result.agendaBeatId === undefined ||
+            result.scheduledTime === undefined
+        ) {
+            throw new Error(
+                'INVALID_FOUNTAIN_AGENDA_TIMESTAMP: Agenda-Beat-Id and Scheduled-Time must both be present when agenda headers exist',
+            )
+        }
+        result.agenda = {
+            beatId: result.agendaBeatId,
+            scheduledTime: result.scheduledTime,
+            reserveHeldTicks: result.reserveHeldTicks ?? 0,
         }
     }
     return result

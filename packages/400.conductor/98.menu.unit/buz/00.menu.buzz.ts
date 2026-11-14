@@ -14,6 +14,7 @@ import {
 } from './telemetryStreamer.buzz.js'
 import { compileAutoScriptDirectoryPipeline } from '../../16.pipeline.unit/buz/pipeline.buzz.js'
 import { sealEpisodeStackReceipt } from '../../13.receipt.unit/buz/receipt.buzz.js'
+import { reconcileEpisodeAgendaCompliance } from '../../25.episode.unit/buz/episode.buzz.js'
 import {
     compileParallaxSceneAst,
     discoverDraftScenePairs,
@@ -55,6 +56,7 @@ export const COMPUTE_DUCKING_LABEL = '[6] COMPUTE ACOUSTIC DUCKING CURVE'
 export const CONDUCTOR_TIMECODE_LABEL =
     '[T] INSPECT EPISODE CHRONOLOGY TIMECODE'
 export const AUTO_SCRIPT_BATCH_LABEL = 'BATCH INGEST AUTO-SCRIPT STACK'
+export const CHRONO_AGENDA_AUDIT_LABEL = 'AUDIT SCHEDULED CHRONO AGENDA STACK'
 
 export const CONDUCTOR_GRID_LEFT = { x: 0, y: 4, xSpan: 4, ySpan: 8 }
 export const CONDUCTOR_GRID_RIGHT = { x: 4, y: 0, xSpan: 8, ySpan: 12 }
@@ -849,6 +851,164 @@ export const runAutoScriptBatchIngestMenu = async (
     return cpy
 }
 
+export const runConductorChronoAgendaAudit = async (
+    cpy: MenuModel,
+    bal: MenuBit,
+    ste?: State,
+): Promise<MenuModel> => {
+    const emit = async (msg: string) => {
+        const clean = sanitizeTo7BitAscii(msg)
+        if (ste && typeof ste.hunt === 'function') {
+            await ste
+                .hunt('[Console action] Update Console', {
+                    idx: 'cns00',
+                    src: clean,
+                })
+                .catch(() => {})
+        } else if (global.LIBRARY) {
+            await global.LIBRARY.hunt('[Console action] Update Console', {
+                idx: 'cns00',
+                src: clean,
+            }).catch(() => {})
+        } else {
+            await streamConsoleTelemetry(clean)
+        }
+    }
+    try {
+        const dat = ((bal?.dat ?? {}) as Record<string, any>) ?? {}
+        let inputDir: string | undefined = dat.inputDir
+            ? String(dat.inputDir)
+            : undefined
+        const expectedBeats: Array<Record<string, any>> = Array.isArray(
+            dat.expectedBeats,
+        )
+            ? (dat.expectedBeats as Array<Record<string, any>>)
+            : []
+        if (!inputDir) {
+            const candidates: string[] = []
+            const ingressRoot = path.join(process.cwd(), 'data', 'ingress')
+            if (fs.existsSync(ingressRoot)) {
+                for (const slug of fs.readdirSync(ingressRoot)) {
+                    const p = path.join(ingressRoot, slug, 'auto-script')
+                    if (fs.existsSync(p)) candidates.push(p)
+                }
+            }
+            const localDrafts = path.join(
+                process.cwd(),
+                'drafts',
+                'auto-script',
+            )
+            if (fs.existsSync(localDrafts)) candidates.push(localDrafts)
+            if (candidates.length === 0) {
+                throw new Error(
+                    '[AGENDA_AUDIT_INPUT_DIR_MISSING] No stacked screenplay directory found',
+                )
+            }
+            if (!global.LIBRARY) {
+                inputDir = candidates[0]
+            } else {
+                const gridBit = await global.LIBRARY.hunt(
+                    '[Grid action] Update Grid',
+                    {
+                        x: CONDUCTOR_GRID_LEFT.x,
+                        y: CONDUCTOR_GRID_LEFT.y,
+                        xSpan: CONDUCTOR_GRID_LEFT.xSpan,
+                        ySpan: CONDUCTOR_GRID_LEFT.ySpan,
+                    },
+                )
+                const choiceBit = await global.LIBRARY.hunt(
+                    '[Open action] Open Choice',
+                    {
+                        dat: {
+                            clr0: 0,
+                            clr1: 3,
+                            cb: async (focusedLabel: string) => {
+                                await emit(
+                                    `>> [AGENDA_AUDIT:HOVER] ${focusedLabel}`,
+                                )
+                            },
+                        },
+                        src: 'VERTICAL',
+                        lst: candidates,
+                        net: gridBit?.grdBit?.dat,
+                    },
+                )
+                inputDir = String(choiceBit?.chcBit?.src ?? candidates[0] ?? '')
+            }
+        }
+        if (!inputDir || inputDir.length === 0) {
+            throw new Error('[AGENDA_AUDIT_INPUT_DIR_MISSING] Empty inputDir')
+        }
+        let manifest
+        try {
+            manifest = compileAutoScriptDirectoryPipeline(inputDir, {
+                expectedAgendaBeats: expectedBeats,
+            })
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err)
+            await emit(`:: [AGENDA_AUDIT:FAIL] ${msg}`)
+            if (bal?.slv) {
+                bal.slv({
+                    mnuBit: {
+                        idx: 'audit-conductor-chrono-agenda-error',
+                        val: 0,
+                        src: msg,
+                    },
+                })
+            }
+            return cpy
+        }
+        const compliance = reconcileEpisodeAgendaCompliance(
+            manifest.scenes as Array<Record<string, any>>,
+            expectedBeats,
+        )
+        const receipt = sealEpisodeStackReceipt(manifest)
+        for (const m of compliance.matchedBeats) {
+            const sched =
+                (m as Record<string, any>).scheduledTime ??
+                (m as Record<string, any>).scheduled_time ??
+                ''
+            const schedSuffix = sched ? ` scheduled=${sched}` : ''
+            await emit(
+                `>> [AGENDA_AUDIT:MATCH] beat=${m.beat_id}${schedSuffix} delta=${m.timingDeltaSeconds}s`,
+            )
+        }
+        for (const missing of compliance.missingBeatIds) {
+            await emit(`:: [AGENDA_AUDIT:MISS] beat=${missing}`)
+        }
+        if (!compliance.compliant) {
+            await emit(
+                `:: [AGENDA_AUDIT:FAIL] Missing beat(s): ${compliance.missingBeatIds.join(', ')}`,
+            )
+        }
+        await emit(
+            `>> [AGENDA_AUDIT:SEALED] scenes=${manifest.scene_count} sha=${receipt.manifest_sha256}`,
+        )
+        if (bal?.slv) {
+            bal.slv({
+                mnuBit: {
+                    idx: 'audit-conductor-chrono-agenda-success',
+                    val: compliance.compliant ? 1 : 0,
+                    dat: { manifest, compliance, receipt },
+                },
+            })
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        await emit(`:: [AGENDA_AUDIT:FAIL] ${msg}`)
+        if (bal?.slv) {
+            bal.slv({
+                mnuBit: {
+                    idx: 'audit-conductor-chrono-agenda-error',
+                    val: 0,
+                    src: msg,
+                },
+            })
+        }
+    }
+    return cpy
+}
+
 export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
     [HYGIENE_AUDIT_LABEL]:
         'Scan unit-colocated topology, NodeNext .js specifiers, and 25.dialogue/25.episode isolation.',
@@ -882,6 +1042,8 @@ export const TOOLTIP_DESCRIPTIONS: Record<string, string> = {
         'Inspect episode chronology plus 24fps SMPTE timecode anchoring.',
     [AUTO_SCRIPT_BATCH_LABEL]:
         'Ingest stacked auto-script folder plus seal chronological episode manifest.',
+    [CHRONO_AGENDA_AUDIT_LABEL]:
+        'Reconcile scheduled ChronoAgendaRegistry deadlines against realized fountain stacks.',
     'ROOT MENU':
         'Exit Conductor flight deck and return to 995.library root cockpit.',
 }
@@ -903,6 +1065,7 @@ export const choices: string[] = [
     'DISPATCH REMOTE AUDIO PIVOT',
     CONDUCTOR_TIMECODE_LABEL,
     AUTO_SCRIPT_BATCH_LABEL,
+    CHRONO_AGENDA_AUDIT_LABEL,
     'ROOT MENU',
 ]
 
@@ -1018,6 +1181,13 @@ export const CONDUCTOR_MENU_CHOICES = [
         tooltip:
             'Ingest stacked auto-script folder plus seal chronological episode manifest.',
         actionType: '[Menu action] Batch Ingest Auto-Script Stack',
+    },
+    {
+        id: 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA',
+        label: CHRONO_AGENDA_AUDIT_LABEL,
+        tooltip:
+            'Reconcile scheduled ChronoAgendaRegistry deadlines against realized fountain stacks.',
+        actionType: '[Menu action] Audit Conductor Chrono Agenda',
     },
     {
         id: 'CHOICE_ROOT_RETURN',
@@ -1556,6 +1726,18 @@ export const updateMenu = async (
             await runAutoScriptBatchIngestMenu(cpy, bal, ste)
             return cpy
         }
+
+        if (
+            bal?.src === CHRONO_AGENDA_AUDIT_LABEL ||
+            (bal?.dat as any)?.selection === CHRONO_AGENDA_AUDIT_LABEL ||
+            bal?.src === 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA' ||
+            bal?.src === ActMnu.AUDIT_CONDUCTOR_CHRONO_AGENDA
+        ) {
+            cpy.activeSelection = 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA'
+            cpy.lastActionTimestamp = Date.now()
+            await runConductorChronoAgendaAudit(cpy, bal, ste)
+            return cpy
+        }
         const lst = (cpy.menuChoices || CONDUCTOR_MENU_CHOICES).map((c: any) =>
             typeof c === 'string' ? c : c.label,
         )
@@ -1683,6 +1865,16 @@ export const updateMenu = async (
         cpy.activeSelection = 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS'
         cpy.lastActionTimestamp = Date.now()
         await runAutoScriptBatchIngestMenu(cpy, bal, ste)
+        return cpy
+    }
+
+    if (
+        selectedLabel === CHRONO_AGENDA_AUDIT_LABEL ||
+        selectedLabel === 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA'
+    ) {
+        cpy.activeSelection = 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA'
+        cpy.lastActionTimestamp = Date.now()
+        await runConductorChronoAgendaAudit(cpy, bal, ste)
         return cpy
     }
 
@@ -2000,6 +2192,10 @@ export const updateMenu = async (
 
             case 'CHOICE_BATCH_INGEST_AUTO_SCRIPTS':
                 await runAutoScriptBatchIngestMenu(cpy, bal, ste)
+                break
+
+            case 'CHOICE_AUDIT_CONDUCTOR_CHRONO_AGENDA':
+                await runConductorChronoAgendaAudit(cpy, bal, ste)
                 break
 
             case 'CHOICE_ROOT_RETURN': {

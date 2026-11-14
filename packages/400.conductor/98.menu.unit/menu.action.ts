@@ -33,9 +33,17 @@ export class BatchIngestAutoScriptStack implements Action {
     constructor(public bale: MenuBit) {}
 }
 
+export const AUDIT_CONDUCTOR_CHRONO_AGENDA =
+    '[Menu action] Audit Conductor Chrono Agenda'
+export class AuditConductorChronoAgenda implements Action {
+    readonly type = AUDIT_CONDUCTOR_CHRONO_AGENDA
+    constructor(public bale: MenuBit) {}
+}
+
 export type Actions =
     | InitMenu
     | UpdateMenu
     | DispatchRemoteAudioPivot
     | AuditConductorTimecode
     | BatchIngestAutoScriptStack
+    | AuditConductorChronoAgenda

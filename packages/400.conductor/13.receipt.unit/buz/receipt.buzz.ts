@@ -7,6 +7,7 @@ import {
 } from '../fce/receipt.interface.js'
 import { EpisodeStackManifest } from '../../16.pipeline.unit/fce/pipeline.interface.js'
 import { canonicalJsonStringify } from '../../30.canon.unit/buz/canon.buzz.js'
+import { compileAutoScriptDirectoryPipeline } from '../../16.pipeline.unit/buz/pipeline.buzz.js'
 import State from '../../99.core/state.js'
 
 export function sealEpisodeStackReceipt(
@@ -17,6 +18,8 @@ export function sealEpisodeStackReceipt(
             a.file_name < b.file_name ? -1 : a.file_name > b.file_name ? 1 : 0,
         )
         .map((s) => ({
+            agenda_beat_id: (s as Record<string, any>).agenda_beat_id,
+            agendaTentpole: (s as Record<string, any>).agendaTentpole,
             daypart: s.daypart,
             episode_from_frame: s.episode_from_frame,
             episode_from_timecode: s.episode_from_timecode,
@@ -24,16 +27,29 @@ export function sealEpisodeStackReceipt(
             episode_to_timecode: s.episode_to_timecode,
             file_name: s.file_name,
             frame_count: s.frame_count,
+            reserve_held_ticks: (s as Record<string, any>).reserve_held_ticks,
             scene_id: s.scene_id,
             scene_timecode: s.scene_timecode,
+            scheduled_time: (s as Record<string, any>).scheduled_time,
             script_sha256: s.script_sha256,
             sequence_index: s.sequence_index,
             six_category_valid: s.six_category_valid,
+            slateLeadPauseFrames: (s as Record<string, any>)
+                .slateLeadPauseFrames,
             start_date: s.start_date,
             start_time_hm: s.start_time_hm,
             turn_count: s.turn_count,
         }))
+    const agendaCompliance = (manifest as Record<string, any>)
+        .agendaCompliance ?? {
+        compliant: true,
+        expectedCount: 0,
+        realizedCount: 0,
+        matchedBeats: [],
+        missingBeatIds: [],
+    }
     const normalized = {
+        agendaCompliance,
         schema_version: '1.0.0' as const,
         scene_count: manifest.scene_count,
         scenes: normalizedScenes,
@@ -105,4 +121,46 @@ export const sealEpisodeStack = async (
             },
         })
     return cpy
+}
+
+export function verifyConductorStackReplayEquivalence(
+    dirAOrManifestA: string | EpisodeStackManifest,
+    dirBOrManifestB: string | EpisodeStackManifest,
+): {
+    equivalent: boolean
+    digestA: string
+    digestB: string
+    mismatches: string[]
+} {
+    const manifestA =
+        typeof dirAOrManifestA === 'string'
+            ? compileAutoScriptDirectoryPipeline(dirAOrManifestA)
+            : (dirAOrManifestA as EpisodeStackManifest)
+    const manifestB =
+        typeof dirBOrManifestB === 'string'
+            ? compileAutoScriptDirectoryPipeline(dirBOrManifestB)
+            : (dirBOrManifestB as EpisodeStackManifest)
+    const receiptA = sealEpisodeStackReceipt(manifestA)
+    const receiptB = sealEpisodeStackReceipt(manifestB)
+    const digestA = receiptA.manifest_sha256
+    const digestB = receiptB.manifest_sha256
+    const mismatches: string[] = []
+    if (digestA !== digestB) {
+        mismatches.push(`manifest_sha256 ${digestA} != ${digestB}`)
+    }
+    const complianceA = canonicalJsonStringify(
+        (manifestA as Record<string, any>).agendaCompliance ?? {},
+    )
+    const complianceB = canonicalJsonStringify(
+        (manifestB as Record<string, any>).agendaCompliance ?? {},
+    )
+    if (complianceA !== complianceB) {
+        mismatches.push('agendaCompliance diverged')
+    }
+    if (manifestA.scene_count !== manifestB.scene_count) {
+        mismatches.push(
+            `scene_count ${manifestA.scene_count} != ${manifestB.scene_count}`,
+        )
+    }
+    return { equivalent: mismatches.length === 0, digestA, digestB, mismatches }
 }

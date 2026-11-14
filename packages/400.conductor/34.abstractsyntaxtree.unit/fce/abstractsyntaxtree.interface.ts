@@ -58,6 +58,18 @@ export const CameraFramingSchema = z
     })
     .strict()
 
+export const SceneAgendaMetadataSchema = z
+    .object({
+        agenda_beat_id: z.string().regex(/^[a-z0-9_]+$/),
+        scheduled_time: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}\s([01]\d|2[0-3]):[0-5]\d$/),
+        reserve_held_ticks: z.number().int().min(0).max(1000).default(0),
+    })
+    .strict()
+
+export type SceneAgendaMetadata = z.infer<typeof SceneAgendaMetadataSchema>
+
 export const SceneChronologySchema = z
     .object({
         calendar_system: z.literal('GREGORIAN_24H').default('GREGORIAN_24H'),
@@ -74,6 +86,7 @@ export const SceneChronologySchema = z
         frames_per_second: z.number().int().min(1).default(24),
         timezone_label: z.string().min(1).optional(),
         era_label: z.string().min(1).optional(),
+        agenda: SceneAgendaMetadataSchema.optional(),
     })
     .strict()
 

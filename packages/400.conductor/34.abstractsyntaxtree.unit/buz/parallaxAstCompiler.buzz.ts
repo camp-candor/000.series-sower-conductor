@@ -56,6 +56,10 @@ export function fountainHeadersToSceneChronology(headers: {
     daypart?: string
     timezoneLabel?: string
     eraLabel?: string
+    agendaBeatId?: string
+    scheduledTime?: string
+    reserveHeldTicks?: number
+    agenda?: { beatId: string; scheduledTime: string; reserveHeldTicks: number }
 }): SceneChronology | undefined {
     if (
         !headers.date ||
@@ -76,6 +80,19 @@ export function fountainHeadersToSceneChronology(headers: {
     if (headers.startTimeHms) payload['start_time_hms'] = headers.startTimeHms
     if (headers.timezoneLabel) payload['timezone_label'] = headers.timezoneLabel
     if (headers.eraLabel) payload['era_label'] = headers.eraLabel
+    const nestedAgenda = headers.agenda
+    const flatBeatId = headers.agendaBeatId ?? nestedAgenda?.beatId
+    const flatScheduledTime =
+        headers.scheduledTime ?? nestedAgenda?.scheduledTime
+    const flatReserveTicks =
+        headers.reserveHeldTicks ?? nestedAgenda?.reserveHeldTicks ?? 0
+    if (flatBeatId !== undefined || flatScheduledTime !== undefined) {
+        payload['agenda'] = {
+            agenda_beat_id: flatBeatId,
+            scheduled_time: flatScheduledTime,
+            reserve_held_ticks: flatReserveTicks,
+        }
+    }
     const parsed = SceneChronologySchema.safeParse(payload)
     if (parsed.success) return parsed.data
     return undefined
